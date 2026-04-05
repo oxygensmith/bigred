@@ -2,6 +2,8 @@
 
 A browser-based physics game. A large red ball (Big Red) rolls across procedurally generated terrain, hunting 21 small coloured balls split into teams. When the countdown expires a finish gate opens on the right side of the world. The team with the most survivors through the gate wins — ties are broken by total health or fastest crossing time, depending on your settings.
 
+[Try it out](https://bigred.robbutz.com)
+
 ## Gameplay
 
 **The small balls**
@@ -30,20 +32,20 @@ A browser-based physics game. A large red ball (Big Red) rolls across procedural
 
 **Start screen options**
 
-| Option | Choices | Effect |
-|---|---|---|
-| Length of game | 2 / 3 / 5 / 10 / 20 min | How long before the gate opens |
-| Landscape | Rocky / Average / Gentle | Terrain roughness — affects how many hills there are and how steep they get |
-| Tiebreaker | Highest total health / Fastest through gate | How ties on survivor count are broken |
+| Option         | Choices                                     | Effect                                                                      |
+| -------------- | ------------------------------------------- | --------------------------------------------------------------------------- |
+| Length of game | 2 / 3 / 5 / 10 / 20 min                     | How long before the gate opens                                              |
+| Landscape      | Rocky / Average / Gentle                    | Terrain roughness — affects how many hills there are and how steep they get |
+| Tiebreaker     | Highest total health / Fastest through gate | How ties on survivor count are broken                                       |
 
 **Controls**
 
-| Input | Action |
-|---|---|
-| Play Again button | Return to start screen after a game ends |
-| Space | Return to start screen (keyboard shortcut) |
-| P | Pause / unpause Big Red |
-| O | Toggle slow-motion for all balls |
+| Input             | Action                                     |
+| ----------------- | ------------------------------------------ |
+| Play Again button | Return to start screen after a game ends   |
+| Space             | Return to start screen (keyboard shortcut) |
+| P                 | Pause / unpause Big Red                    |
+| O                 | Toggle slow-motion for all balls           |
 
 ## Development
 
