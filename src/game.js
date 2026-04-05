@@ -105,6 +105,9 @@ so balls will still differ from each other. */
   LARGE_BALL_GROWTH_PER_KILL: 3, // Flat px added to radius per kill. Set 0 to disable.
   LARGE_BALL_GROWTH_SPEED: 3, // How fast radius lerps to its target size (higher = faster growth animation)
 
+  // ─── Audio ────────────────────────────────────────────────────────────────
+  USE_SAMPLED_AUDIO: 0, // 0 = synthesized fallback sounds only; 1 = load base64 samples from sounds.js
+
   // ─── Terrain generation ───────────────────────────────────────────────────
   TERRAIN_CHUNKS: 750, // Not used at runtime — chunk count is auto-calculated as 10 segments/sec of game duration
   TERRAIN_BASE_Y: 420, // Baseline y around which the sine envelope is centred
@@ -114,7 +117,7 @@ so balls will still differ from each other. */
   TERRAIN_MIN_Y: 260, // Highest point terrain can reach (px from top)
   TERRAIN_MAX_Y_OFFSET: 80, // Minimum distance from the bottom of the canvas (px)
   TERRAIN_STREAK_LENGTH: 12, // Max consecutive segments that can share the same up/down direction
-  TERRAIN_STREAK_CHANCE: 0.78, // Probability (0–1) that the next segment continues in the same direction
+  TERRAIN_STREAK_CHANCE: 0.99, // Probability (0–1) that the next segment continues in the same direction
 
   // ─── Camera ───────────────────────────────────────────────────────────────
   CAMERA_OFFSET_X: 180, // How far from the left edge Big Red is kept (px)
@@ -422,7 +425,7 @@ export class Game {
   }
 
   begin(durationMs, tiebreaker, landscapeSmoothness) {
-    this.audio.init();
+    this.audio.init(CONFIG.USE_SAMPLED_AUDIO);
     this.gameDurationMs = durationMs;
     this.tiebreaker = tiebreaker;
     CONFIG.LANDSCAPE_SMOOTHNESS = landscapeSmoothness;

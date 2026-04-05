@@ -27,11 +27,12 @@ export class AudioEngine {
     this.loseBuffer = null;
   }
 
-  // Call once from a user-gesture handler (Start button) to unlock AudioContext
-  init() {
+  // Call once from a user-gesture handler (Start button) to unlock AudioContext.
+  // Pass useSampled=1 to load base64 samples from sounds.js; 0 for synth-only.
+  init(useSampled = 1) {
     if (this.ac) return;
     this.ac = new (window.AudioContext || window.webkitAudioContext)();
-    this._loadSamples();
+    if (useSampled) this._loadSamples();
   }
 
   _loadSamples() {
