@@ -95,7 +95,7 @@ so balls will still differ from each other. */
   BACKWALL_VX_SMALL: 800, // vx set on small balls on wall contact (px/s) — instant lurch
 
   // ─── Combat ───────────────────────────────────────────────────────────────
-  SMALL_BALL_HEALTH: 100, // HP each small ball starts with
+  SMALL_BALL_HEALTH: 150, // HP each small ball starts with
   LARGE_BALL_MASS_RATIO: 16, // Big Red's mass relative to a small ball. Higher = less recoil on Big Red, harder impact on small balls.
   /* Tuning guide:
      6 — noticeable, but Big Red still wobbles a bit on direct hits
