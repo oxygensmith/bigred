@@ -15,7 +15,6 @@ const CONFIG = {
   BALL_COUNT: 21, // Number of small balls (max = BALL_ROSTER.length)
   LARGE_BALL_RADIUS: 48, // Big Red's starting radius in px
   SMALL_BALL_RADIUS: 10, // Small ball radius in px
-  SMALL_BALL_HEALTH: 64, // HP each small ball starts with
 
   // ─── Per-ball variance ────────────────────────────────────────────────────
   // Each stat is multiplied by (1 + rand(-VAR, +VAR)) at spawn.
@@ -96,6 +95,7 @@ so balls will still differ from each other. */
   BACKWALL_VX_SMALL: 800, // vx set on small balls on wall contact (px/s) — instant lurch
 
   // ─── Combat ───────────────────────────────────────────────────────────────
+  SMALL_BALL_HEALTH: 100, // HP each small ball starts with
   LARGE_BALL_MASS_RATIO: 16, // Big Red's mass relative to a small ball. Higher = less recoil on Big Red, harder impact on small balls.
   /* Tuning guide:
      6 — noticeable, but Big Red still wobbles a bit on direct hits
