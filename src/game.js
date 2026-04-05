@@ -95,13 +95,13 @@ so balls will still differ from each other. */
   BACKWALL_VX_SMALL: 800, // vx set on small balls on wall contact (px/s) — instant lurch
 
   // ─── Combat ───────────────────────────────────────────────────────────────
-  SMALL_BALL_HEALTH: 150, // HP each small ball starts with
+  SMALL_BALL_HEALTH: 100, // HP each small ball starts with
   LARGE_BALL_MASS_RATIO: 16, // Big Red's mass relative to a small ball. Higher = less recoil on Big Red, harder impact on small balls.
   /* Tuning guide:
      6 — noticeable, but Big Red still wobbles a bit on direct hits
      12 — (default) Big Red rolls through with authority, small balls scatter
      20+ — Big Red is essentially immovable; feels more like a wall than a ball */
-  DAMAGE_PER_SECOND: 32, // HP/s drained from a small ball while touching Big Red
+  DAMAGE_PER_SECOND: 24, // HP/s drained from a small ball while touching Big Red
   LARGE_BALL_GROWTH_PER_KILL: 3, // Flat px added to radius per kill. Set 0 to disable.
   LARGE_BALL_GROWTH_SPEED: 3, // How fast radius lerps to its target size (higher = faster growth animation)
 
@@ -246,6 +246,7 @@ export class Game {
     this.ctx = canvas.getContext("2d");
     this.ui = ui;
     this.paused = false;
+    this.timeScale = 1;
     this.lastTimestamp = 0;
     this.elapsedMs = 0;
     this.cameraX = 0;
@@ -279,6 +280,18 @@ export class Game {
       if (event.code === "KeyO") {
         event.preventDefault();
         this.allBallsPaused = !this.allBallsPaused;
+      }
+      if (event.code === "Equal" || event.code === "NumpadAdd") {
+        event.preventDefault();
+        const steps = [0.25, 0.5, 1, 2, 4, 8, 16];
+        const idx = steps.indexOf(this.timeScale);
+        if (idx < steps.length - 1) this.timeScale = steps[idx + 1];
+      }
+      if (event.code === "Minus" || event.code === "NumpadSubtract") {
+        event.preventDefault();
+        const steps = [0.25, 0.5, 1, 2, 4, 8, 16];
+        const idx = steps.indexOf(this.timeScale);
+        if (idx > 0) this.timeScale = steps[idx - 1];
       }
     });
   }
@@ -469,7 +482,7 @@ export class Game {
     this.lastTimestamp = timestamp;
 
     if (!this.paused) {
-      this.update(deltaMs / 1000);
+      this.update((deltaMs / 1000) * this.timeScale);
     }
 
     this.draw();
@@ -1036,6 +1049,7 @@ export class Game {
       <div class="diagnostics__row"><span>Big Red vx</span><span class="diagnostics__value">${Math.round(this.largeBall.vx)}</span></div>
       <div class="diagnostics__row"><span>Big Red vy</span><span class="diagnostics__value">${Math.round(this.largeBall.vy)}</span></div>
       <div class="diagnostics__row"><span>Speed scale</span><span class="diagnostics__value">${(this.largeBallSpeedScale * this.allBallsSpeedScale).toFixed(2)}</span></div>
+      <div class="diagnostics__row"><span>Time scale (+/-)</span><span class="diagnostics__value">${this.timeScale}×</span></div>
       <div class="diagnostics__row"><span>P (Big Red)</span><span class="diagnostics__value">${this.largeBallPaused ? "paused" : "running"}</span></div>
       <div class="diagnostics__row"><span>O (all balls)</span><span class="diagnostics__value">${this.allBallsPaused ? "paused" : "running"}</span></div>
     `;
