@@ -25,10 +25,29 @@
           </header>
           <div class="canvas-wrap">
             <canvas id="game-canvas" width="1200" height="640"></canvas>
+            <div id="start-overlay" class="start-overlay">
+              <p class="start-overlay__title">Big Red</p>
+              <div class="start-overlay__section">
+                <p class="start-overlay__label">Length of game</p>
+                <div class="duration-picker">
+                  <button class="duration-btn" data-ms="120000">2 min</button>
+                  <button class="duration-btn" data-ms="180000">3 min</button>
+                  <button
+                    class="duration-btn duration-btn--selected"
+                    data-ms="300000"
+                  >
+                    5 min
+                  </button>
+                  <button class="duration-btn" data-ms="600000">10 min</button>
+                  <button class="duration-btn" data-ms="1200000">20 min</button>
+                </div>
+              </div>
+              <button id="start-btn" class="start-btn">Start</button>
+            </div>
             <div id="end-overlay" class="end-overlay end-overlay--hidden">
               <p id="end-headline" class="end-overlay__headline"></p>
               <p id="end-subline" class="end-overlay__subline"></p>
-              <p class="end-overlay__prompt">Press Space to play again</p>
+              <p class="end-overlay__prompt">Press Space to return to start</p>
             </div>
           </div>
         </div>

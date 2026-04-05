@@ -11,8 +11,25 @@ window.addEventListener("DOMContentLoaded", () => {
     endOverlay: document.getElementById("end-overlay"),
     endHeadline: document.getElementById("end-headline"),
     endSubline: document.getElementById("end-subline"),
+    startOverlay: document.getElementById("start-overlay"),
   };
 
   const game = new Game(canvas, ui);
-  game.start();
+
+  let selectedDuration = 300000; // default 5 min
+
+  const durationBtns = document.querySelectorAll(".duration-btn");
+  durationBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      durationBtns.forEach((b) => b.classList.remove("duration-btn--selected"));
+      btn.classList.add("duration-btn--selected");
+      selectedDuration = parseInt(btn.dataset.ms, 10);
+    });
+  });
+
+  document.getElementById("start-btn").addEventListener("click", () => {
+    game.begin(selectedDuration);
+  });
+
+  game.showStartScreen();
 });

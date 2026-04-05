@@ -2,17 +2,17 @@ const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
   SCENE_WIDTH: 44000, // Total world width in px
   SCENE_HEIGHT: 640, // World height in px (also canvas height)
-  GAME_DURATION_MS: 60000, // Time until the finish gate opens (ms)
+  GAME_DURATION_MS: 300000, // Default time until the finish gate opens (ms) — overridden by start screen selection
   // FINISH_LINE_X is not fixed — it is set dynamically when the timer hits zero
   FINISH_GATE_CLOSE_SECS: 12, // Seconds for the doors to fully close after the gate appears
   FINISH_GATE_WIDTH: 18, // Visual thickness of each door panel (px)
-  GRAVITY: 180, // Downward acceleration (px/s²)
+  GRAVITY: 120, // Downward acceleration (px/s²)
 
   // ─── Balls ────────────────────────────────────────────────────────────────
   BALL_COUNT: 21, // Number of small balls (max = BALL_ROSTER.length)
   LARGE_BALL_RADIUS: 96, // Big Red's radius in px
   SMALL_BALL_RADIUS: 8, // Small ball radius in px
-  SMALL_BALL_HEALTH: 32, // HP each small ball starts with
+  SMALL_BALL_HEALTH: 64, // HP each small ball starts with
 
   // ─── Per-ball variance ────────────────────────────────────────────────────
   // Each stat is multiplied by (1 + rand(-VAR, +VAR)) at spawn.
@@ -67,6 +67,11 @@ const CONFIG = {
   BACKWALL_VX_SMALL: 800, // vx set on small balls on wall contact (px/s) — instant lurch
 
   // ─── Combat ───────────────────────────────────────────────────────────────
+  LARGE_BALL_MASS_RATIO: 12, // Big Red's mass relative to a small ball. Higher = less recoil on Big Red, harder impact on small balls.
+  /* Tuning guide:
+     6 — noticeable, but Big Red still wobbles a bit on direct hits
+     12 — (default) Big Red rolls through with authority, small balls scatter
+     20+ — Big Red is essentially immovable; feels more like a wall than a ball */
   DAMAGE_PER_SECOND: 32, // HP/s drained from a small ball while touching Big Red
 
   // ─── Terrain generation ───────────────────────────────────────────────────
@@ -79,7 +84,7 @@ const CONFIG = {
   TERRAIN_MAX_Y_OFFSET: 80, // Minimum distance from the bottom of the canvas (px)
 
   // ─── Camera ───────────────────────────────────────────────────────────────
-  CAMERA_OFFSET_X: 420, // How far from the left edge Big Red is kept (px)
+  CAMERA_OFFSET_X: 180, // How far from the left edge Big Red is kept (px)
   CAMERA_LERP: 0.1, // Camera smoothing factor (0=frozen, 1=instant snap)
 };
 
@@ -198,10 +203,13 @@ export class Game {
 
     this.resize();
     window.addEventListener("resize", () => this.resize());
+    this.gameDurationMs = CONFIG.GAME_DURATION_MS;
+    this.loopRunning = false;
+
     window.addEventListener("keydown", (event) => {
       if (event.code === "Space") {
         event.preventDefault();
-        if (this.gameOver) this.start();
+        if (this.gameOver) this.showStartScreen();
         else this.togglePause();
       }
       if (event.code === "KeyP") {
@@ -299,9 +307,19 @@ export class Game {
     this.updateScoreboard();
   }
 
-  start() {
+  showStartScreen() {
+    this.ui.endOverlay.classList.add("end-overlay--hidden");
+    this.ui.startOverlay.classList.remove("start-overlay--hidden");
+  }
+
+  begin(durationMs) {
+    this.gameDurationMs = durationMs;
+    this.ui.startOverlay.classList.add("start-overlay--hidden");
     this.reset();
-    requestAnimationFrame((timestamp) => this.frame(timestamp));
+    if (!this.loopRunning) {
+      this.loopRunning = true;
+      requestAnimationFrame((timestamp) => this.frame(timestamp));
+    }
   }
 
   togglePause() {
@@ -313,10 +331,18 @@ export class Game {
     const isDraw = this.gameOver === "DRAW";
     const isEscaped = this.gameOver === "ESCAPED";
 
-    const headline = this.gameOver === "BIG_RED_WINS" ? "BIG RED WINS"
-      : isEscaped ? "ESCAPED!!!" : "DRAW";
-    const color = this.gameOver === "BIG_RED_WINS" ? "#e8493f"
-      : isEscaped ? this.escapedTeam.color : "#aaaaaa";
+    const headline =
+      this.gameOver === "BIG_RED_WINS"
+        ? "BIG RED WINS"
+        : isEscaped
+          ? "ESCAPED!!!"
+          : "DRAW";
+    const color =
+      this.gameOver === "BIG_RED_WINS"
+        ? "#e8493f"
+        : isEscaped
+          ? this.escapedTeam.color
+          : "#aaaaaa";
 
     this.ui.endHeadline.textContent = headline;
     this.ui.endHeadline.style.color = color;
@@ -329,8 +355,7 @@ export class Game {
     } else if (isDraw && this.drawBestTeam) {
       const t = this.drawBestTeam;
       const s = t.through === 1 ? "survivor" : "survivors";
-      this.ui.endSubline.textContent =
-        `${t.name}: ${t.through} ${s} through gate, ${t.totalHealth.toFixed(2)} total health remaining`;
+      this.ui.endSubline.textContent = `${t.name}: ${t.through} ${s} through gate, ${t.totalHealth.toFixed(2)} total health remaining`;
       this.ui.endSubline.style.color = t.color;
     } else {
       this.ui.endSubline.textContent = "";
@@ -364,7 +389,7 @@ export class Game {
   update(dt) {
     if (!this.gameOver) {
       this.elapsedMs += dt * 1000;
-      if (!this.finishActive && this.elapsedMs >= CONFIG.GAME_DURATION_MS) {
+      if (!this.finishActive && this.elapsedMs >= this.gameDurationMs) {
         this.finishActive = true;
         this.finishLineX = this.cameraX + this.canvas.clientWidth;
         // Flatten all terrain points beyond the finish line
@@ -380,28 +405,35 @@ export class Game {
       const teams = [...new Set(this.smallBalls.map((b) => b.team))];
       const eligibleTeams = teams
         .map((team) => {
-          const survivors = this.smallBalls.filter((b) => b.team === team && b.alive);
+          const survivors = this.smallBalls.filter(
+            (b) => b.team === team && b.alive,
+          );
           const through = survivors.filter((b) => b.finished);
-          const qualifies = survivors.length > 0 && through.length === survivors.length;
+          const qualifies =
+            survivors.length > 0 && through.length === survivors.length;
           return { team, through: through.length, qualifies };
         })
         .filter((t) => t.qualifies)
         .sort((a, b) => b.through - a.through);
-      const winningTeam = eligibleTeams.length > 0 ? eligibleTeams[0].team : null;
+      const winningTeam =
+        eligibleTeams.length > 0 ? eligibleTeams[0].team : null;
       const gateClosed =
         this.finishActive &&
         this.finishGateAge >= CONFIG.FINISH_GATE_CLOSE_SECS;
-      if (allDead) { this.gameOver = "BIG_RED_WINS"; this.showEndOverlay(); }
-      else if (winningTeam) {
+      if (allDead) {
+        this.gameOver = "BIG_RED_WINS";
+        this.showEndOverlay();
+      } else if (winningTeam) {
         this.gameOver = "ESCAPED";
         const rosterEntries = BALL_ROSTER.filter((b) => b.team === winningTeam);
         const throughCount = eligibleTeams[0].through;
         const teamTotal = rosterEntries.length;
-        const reason = throughCount === teamTotal
-          ? `First to get all ${teamTotal} members through`
-          : throughCount === 1
-            ? "Last surviving member through the gate"
-            : `First to get ${throughCount} surviving members through`;
+        const reason =
+          throughCount === teamTotal
+            ? `First to get all ${teamTotal} members through`
+            : throughCount === 1
+              ? "Last surviving member through the gate"
+              : `First to get ${throughCount} surviving members through`;
         this.escapedTeam = {
           name: winningTeam,
           color: rosterEntries[Math.floor(rosterEntries.length / 2)].color,
@@ -704,10 +736,15 @@ export class Game {
       ball.x - ball.radius > this.finishLineX
     ) {
       // Confirm the door hasn't closed over this ball's y position
-      const closeFrac = clamp(this.finishGateAge / CONFIG.FINISH_GATE_CLOSE_SECS, 0, 1);
+      const closeFrac = clamp(
+        this.finishGateAge / CONFIG.FINISH_GATE_CLOSE_SECS,
+        0,
+        1,
+      );
       const doorReach = closeFrac * (CONFIG.SCENE_HEIGHT / 2);
       const blockedByTop = ball.y - ball.radius < doorReach;
-      const blockedByBottom = ball.y + ball.radius > CONFIG.SCENE_HEIGHT - doorReach;
+      const blockedByBottom =
+        ball.y + ball.radius > CONFIG.SCENE_HEIGHT - doorReach;
       if (!blockedByTop && !blockedByBottom) {
         ball.finished = true;
         ball.spinDrive = 0;
@@ -729,20 +766,22 @@ export class Game {
         const normalX = dx / (distance || 1);
         const normalY = dy / (distance || 1);
         const overlap = minDist - distance;
-        small.x += normalX * overlap * 0.7;
-        small.y += normalY * overlap * 0.7;
-        this.largeBall.x -= normalX * overlap * 0.3;
-        this.largeBall.y -= normalY * overlap * 0.3;
+        const massRatio = CONFIG.LARGE_BALL_MASS_RATIO;
+        const smallShare = massRatio / (massRatio + 1); // fraction of overlap pushed onto small ball
+        small.x += normalX * overlap * smallShare;
+        small.y += normalY * overlap * smallShare;
+        this.largeBall.x -= normalX * overlap * (1 - smallShare);
+        this.largeBall.y -= normalY * overlap * (1 - smallShare);
 
         const relVel =
           (this.largeBall.vx - small.vx) * normalX +
           (this.largeBall.vy - small.vy) * normalY;
         if (relVel > 0) {
           const impulse = relVel * 0.6;
-          this.largeBall.vx -= impulse * normalX;
-          this.largeBall.vy -= impulse * normalY;
-          small.vx += impulse * normalX;
-          small.vy += impulse * normalY;
+          this.largeBall.vx -= (impulse / massRatio) * normalX;
+          this.largeBall.vy -= (impulse / massRatio) * normalY;
+          small.vx += impulse * smallShare * normalX;
+          small.vy += impulse * smallShare * normalY;
         }
 
         // Spin transfer: Big Red rotates clockwise (omega = vx / radius).
@@ -804,7 +843,7 @@ export class Game {
 
     this.ui.timer.innerText = this.finishActive
       ? "FINISH GATE OPEN"
-      : `Time ${formatTime(CONFIG.GAME_DURATION_MS - this.elapsedMs)}`;
+      : `Time ${formatTime(this.gameDurationMs - this.elapsedMs)}`;
     this.ui.aliveSummary.innerText = `Alive ${aliveBalls} / ${CONFIG.BALL_COUNT}`;
 
     this.ui.diagnostics.innerHTML = `
