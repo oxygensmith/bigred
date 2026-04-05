@@ -105,6 +105,62 @@
   }
 }
 
+.landscape-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 1rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--text);
+  }
+
+  &.landscape-btn--selected {
+    background: rgba(232, 73, 63, 0.18);
+    border-color: var(--red);
+    color: var(--text);
+  }
+}
+
+.tiebreaker-picker {
+  flex-direction: column;
+}
+
+.tiebreaker-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 1rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--text);
+  }
+
+  &.tiebreaker-btn--selected {
+    background: rgba(232, 73, 63, 0.18);
+    border-color: var(--red);
+    color: var(--text);
+  }
+}
+
 .start-btn {
   padding: 8px 52px;
   border-radius: 14px;

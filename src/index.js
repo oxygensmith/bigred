@@ -16,7 +16,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const game = new Game(canvas, ui);
 
-  let selectedDuration = 300000; // default 5 min
+  let selectedDuration = 300000;
+  let selectedTiebreaker = "health";
+  let selectedSmoothness = 80;
 
   const durationBtns = document.querySelectorAll(".duration-btn");
   durationBtns.forEach((btn) => {
@@ -27,8 +29,26 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  const landscapeBtns = document.querySelectorAll(".landscape-btn");
+  landscapeBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      landscapeBtns.forEach((b) => b.classList.remove("landscape-btn--selected"));
+      btn.classList.add("landscape-btn--selected");
+      selectedSmoothness = parseInt(btn.dataset.smoothness, 10);
+    });
+  });
+
+  const tiebreakerBtns = document.querySelectorAll(".tiebreaker-btn");
+  tiebreakerBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      tiebreakerBtns.forEach((b) => b.classList.remove("tiebreaker-btn--selected"));
+      btn.classList.add("tiebreaker-btn--selected");
+      selectedTiebreaker = btn.dataset.tb;
+    });
+  });
+
   document.getElementById("start-btn").addEventListener("click", () => {
-    game.begin(selectedDuration);
+    game.begin(selectedDuration, selectedTiebreaker, selectedSmoothness);
   });
 
   game.showStartScreen();

@@ -1,7 +1,8 @@
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
-  SCENE_WIDTH: 44000, // Total world width in px
+  // SCENE_WIDTH is not fixed — calculated at game start as terrainChunks × LANDSCAPE_SMOOTHNESS
   SCENE_HEIGHT: 640, // World height in px (also canvas height)
+  LANDSCAPE_SMOOTHNESS: 58, // Pixel width per terrain segment. Lower = rockier (~20), higher = smoother rolling hills (~360)
   GAME_DURATION_MS: 300000, // Default time until the finish gate opens (ms) — overridden by start screen selection
   // FINISH_LINE_X is not fixed — it is set dynamically when the timer hits zero
   FINISH_GATE_CLOSE_SECS: 12, // Seconds for the doors to fully close after the gate appears
@@ -28,11 +29,11 @@ const CONFIG = {
   // up; rolling grip on the ground converts omega → vx (and vice-versa).
   SMALL_SPIN_DRIVE: 48, // Angular acceleration from self-propulsion (rad/s²), small balls
   LARGE_SPIN_DRIVE: 8, // Angular acceleration from self-propulsion (rad/s²), Big Red
-  ROLLING_GRIP: 10, // Coupling strength between omega and vx (per second)
+  ROLLING_GRIP: 20, // Coupling strength between omega and vx (per second)
   SPIN_AIR_DECAY: 0.996, // Omega multiplier applied per frame while airborne
   MIN_OMEGA_SMALL: 1.5, // Minimum omega for small balls (rad/s) — the "lowest gear"
   MIN_OMEGA_LARGE: 0.25, // Minimum omega for Big Red (rad/s)
-  SPIN_TRANSFER: 0.42, // Fraction of Big Red's surface speed transferred to a small ball on contact
+  SPIN_TRANSFER: 0.72, // Fraction of Big Red's surface speed transferred to a small ball on contact
 
   // ─── Speed limits ─────────────────────────────────────────────────────────
   SMALL_MAX_SPEED: 300, // Max vx for small balls (px/s)
@@ -75,11 +76,11 @@ const CONFIG = {
   DAMAGE_PER_SECOND: 32, // HP/s drained from a small ball while touching Big Red
 
   // ─── Terrain generation ───────────────────────────────────────────────────
-  TERRAIN_CHUNKS: 750, // Number of terrain segments (more = more varied hills)
+  TERRAIN_CHUNKS: 750, // Not used at runtime — chunk count is auto-calculated as 10 segments/sec of game duration
   TERRAIN_BASE_Y: 420, // Baseline y around which the sine envelope is centred
   TERRAIN_PEAK_AMPLITUDE: 250, // Amplitude of the large-scale sine envelope (px)
   TERRAIN_RANDOM_DELTA: 160, // Max random y-jitter added per chunk (px)
-  TERRAIN_SMOOTHING: 0, // How strongly each chunk pulls toward the envelope (0=none, 1=full)
+  TERRAIN_SMOOTHING: 0.5, // How strongly each chunk pulls toward the envelope (0=none, 1=full)
   TERRAIN_MIN_Y: 260, // Highest point terrain can reach (px from top)
   TERRAIN_MAX_Y_OFFSET: 80, // Minimum distance from the bottom of the canvas (px)
 
@@ -146,9 +147,8 @@ const BIG_RED_SVG = `<svg id="big-red" data-name="big-red" xmlns="http://www.w3.
   <path fill="#e8493f" d="M469.63,256l42.37-13.42-43.54-8.91,40.74-17.77-44.24-4.31,38.66-21.93-44.45.33,36.15-25.85-44.17,4.98,33.25-29.49-43.41,9.57,29.99-32.81-42.17,14.05,26.4-35.76-40.47,18.38,22.51-38.32-38.32,22.51,18.38-40.47-35.76,26.4,14.05-42.17-32.81,29.99,9.57-43.41-29.49,33.25,4.98-44.17-25.85,36.15.33-44.45-21.93,38.66-4.31-44.24-17.77,40.74L269.42,0l-13.42,42.37L242.58,0l-8.91,43.54L215.9,2.8l-4.31,44.24-21.93-38.66.33,44.45-25.85-36.15,4.98,44.17-29.49-33.25,9.57,43.41-32.81-29.99,14.05,42.17-35.76-26.4,18.38,40.47-38.32-22.51,22.51,38.32-40.47-18.38,26.4,35.76-42.17-14.05,29.99,32.81-43.41-9.57,33.25,29.49-44.17-4.98,36.15,25.85-44.45-.33,38.66,21.93-44.24,4.31,40.74,17.77L0,242.58l42.37,13.42L0,269.42l43.54,8.91-40.74,17.77,44.24,4.31-38.66,21.93,44.45-.33-36.15,25.85,44.17-4.98-33.25,29.49,43.41-9.57-29.99,32.81,42.17-14.05-26.4,35.76,40.47-18.38-22.51,38.32,38.32-22.51-18.38,40.47,35.76-26.4-14.05,42.17,32.81-29.99-9.57,43.41,29.49-33.25-4.98,44.17,25.85-36.15-.33,44.45,21.93-38.66,4.31,44.24,17.77-40.74,8.91,43.54,13.42-42.37,13.42,42.37,8.91-43.54,17.77,40.74,4.31-44.24,21.93,38.66-.33-44.45,25.85,36.15-4.98-44.17,29.49,33.25-9.57-43.41,32.81,29.99-14.05-42.17,35.76,26.4-18.38-40.47,38.32,22.51-22.51-38.32,40.47,18.38-26.4-35.76,42.17,14.05-29.99-32.81,43.41,9.57-33.25-29.49,44.17,4.98-36.15-25.85,44.45.33-38.66-21.93,44.24-4.31-40.74-17.77,43.54-8.91-42.37-13.42ZM429.25,269.77h-166.23v166.23h-19.21v-166.23H77.59v-19.21h166.23V84.34h19.21v166.23h166.23v19.21Z"/>
 </svg>`;
 
-const createTerrain = (width, height) => {
+const createTerrain = (width, height, chunks) => {
   const points = [];
-  const chunks = CONFIG.TERRAIN_CHUNKS;
   const chunkWidth = width / chunks;
   let y = height - 100;
 
@@ -204,6 +204,7 @@ export class Game {
     this.resize();
     window.addEventListener("resize", () => this.resize());
     this.gameDurationMs = CONFIG.GAME_DURATION_MS;
+    this.tiebreaker = "health";
     this.loopRunning = false;
 
     window.addEventListener("keydown", (event) => {
@@ -232,7 +233,9 @@ export class Game {
     this.seed = Math.floor(Math.random() * 0xffffffff);
     const rng = mulberry32(this.seed);
 
-    this.terrain = createTerrain(CONFIG.SCENE_WIDTH, CONFIG.SCENE_HEIGHT);
+    this.terrainChunks = Math.round((this.gameDurationMs / 1000) * 10);
+    this.sceneWidth = this.terrainChunks * CONFIG.LANDSCAPE_SMOOTHNESS;
+    this.terrain = createTerrain(this.sceneWidth, CONFIG.SCENE_HEIGHT, this.terrainChunks);
     this.largeBall = {
       type: "large",
       x: 120,
@@ -281,6 +284,8 @@ export class Game {
           health: CONFIG.SMALL_BALL_HEALTH,
           alive: true,
           finished: false,
+          finishedAt: null,
+          healthAtFinish: 0,
           stuck: false,
         };
       },
@@ -296,7 +301,6 @@ export class Game {
     this.allBallsSpeedScale = 1;
     this.gameOver = null;
     this.escapedTeam = null;
-    this.drawBestTeam = null;
     this.ui.endOverlay.classList.add("end-overlay--hidden");
     this.finishLineX = 0;
     this.finishGateAge = 0;
@@ -312,8 +316,10 @@ export class Game {
     this.ui.startOverlay.classList.remove("start-overlay--hidden");
   }
 
-  begin(durationMs) {
+  begin(durationMs, tiebreaker, landscapeSmoothness) {
     this.gameDurationMs = durationMs;
+    this.tiebreaker = tiebreaker;
+    CONFIG.LANDSCAPE_SMOOTHNESS = landscapeSmoothness;
     this.ui.startOverlay.classList.add("start-overlay--hidden");
     this.reset();
     if (!this.loopRunning) {
@@ -328,35 +334,23 @@ export class Game {
 
   showEndOverlay() {
     const o = this.ui.endOverlay;
-    const isDraw = this.gameOver === "DRAW";
     const isEscaped = this.gameOver === "ESCAPED";
+    const color = isEscaped ? this.escapedTeam.color : "#e8493f";
 
-    const headline =
-      this.gameOver === "BIG_RED_WINS"
-        ? "BIG RED WINS"
-        : isEscaped
-          ? "ESCAPED!!!"
-          : "DRAW";
-    const color =
-      this.gameOver === "BIG_RED_WINS"
-        ? "#e8493f"
-        : isEscaped
-          ? this.escapedTeam.color
-          : "#aaaaaa";
-
-    this.ui.endHeadline.textContent = headline;
+    this.ui.endHeadline.textContent = isEscaped ? "ESCAPED!!!" : "BIG RED WINS";
     this.ui.endHeadline.style.color = color;
     this.ui.endHeadline.style.textShadow = `0 0 32px ${color}`;
     o.style.borderColor = color;
 
     if (isEscaped) {
-      this.ui.endSubline.textContent = `${this.escapedTeam.name} team wins — ${this.escapedTeam.reason}`;
-      this.ui.endSubline.style.color = color;
-    } else if (isDraw && this.drawBestTeam) {
-      const t = this.drawBestTeam;
+      const t = this.escapedTeam;
       const s = t.through === 1 ? "survivor" : "survivors";
-      this.ui.endSubline.textContent = `${t.name}: ${t.through} ${s} through gate, ${t.totalHealth.toFixed(2)} total health remaining`;
-      this.ui.endSubline.style.color = t.color;
+      const tiebreakerStr =
+        this.tiebreaker === "health"
+          ? `${t.totalHealth.toFixed(1)} total health`
+          : `last through at ${formatTime(t.lastThrough)}`;
+      this.ui.endSubline.textContent = `${t.name} team — ${t.through} ${s} through · ${tiebreakerStr}`;
+      this.ui.endSubline.style.color = color;
     } else {
       this.ui.endSubline.textContent = "";
     }
@@ -400,72 +394,56 @@ export class Game {
       }
       const allDead =
         this.smallBalls.length > 0 && this.smallBalls.every((b) => !b.alive);
-      // A team wins when every surviving member has crossed.
-      // Pick the team with the most members through (in case multiple qualify simultaneously).
-      const teams = [...new Set(this.smallBalls.map((b) => b.team))];
-      const eligibleTeams = teams
-        .map((team) => {
-          const survivors = this.smallBalls.filter(
-            (b) => b.team === team && b.alive,
-          );
-          const through = survivors.filter((b) => b.finished);
-          const qualifies =
-            survivors.length > 0 && through.length === survivors.length;
-          return { team, through: through.length, qualifies };
-        })
-        .filter((t) => t.qualifies)
-        .sort((a, b) => b.through - a.through);
-      const winningTeam =
-        eligibleTeams.length > 0 ? eligibleTeams[0].team : null;
       const gateClosed =
         this.finishActive &&
         this.finishGateAge >= CONFIG.FINISH_GATE_CLOSE_SECS;
+
       if (allDead) {
         this.gameOver = "BIG_RED_WINS";
         this.showEndOverlay();
-      } else if (winningTeam) {
-        this.gameOver = "ESCAPED";
-        const rosterEntries = BALL_ROSTER.filter((b) => b.team === winningTeam);
-        const throughCount = eligibleTeams[0].through;
-        const teamTotal = rosterEntries.length;
-        const reason =
-          throughCount === teamTotal
-            ? `First to get all ${teamTotal} members through`
-            : throughCount === 1
-              ? "Last surviving member through the gate"
-              : `First to get ${throughCount} surviving members through`;
-        this.escapedTeam = {
-          name: winningTeam,
-          color: rosterEntries[Math.floor(rosterEntries.length / 2)].color,
-          reason,
-        };
-        this.showEndOverlay();
       } else if (gateClosed) {
-        // Gate closed with no winner — draw. Find the best-performing team.
+        // Gate closed — decide winner now.
         const teamNames = [...new Set(this.smallBalls.map((b) => b.team))];
         const teamStats = teamNames.map((team) => {
-          const through = this.smallBalls.filter(
+          const finished = this.smallBalls.filter(
             (b) => b.team === team && b.finished,
           );
           return {
             name: team,
-            through: through.length,
-            totalHealth: through.reduce((s, b) => s + b.health, 0),
+            through: finished.length,
+            totalHealth: finished.reduce((s, b) => s + b.healthAtFinish, 0),
+            lastThrough:
+              finished.length > 0
+                ? Math.max(...finished.map((b) => b.finishedAt))
+                : Infinity,
             color: BALL_ROSTER.filter((b) => b.team === team)[1].color,
           };
         });
-        teamStats.sort((a, b) =>
-          b.through !== a.through
-            ? b.through - a.through
-            : b.totalHealth - a.totalHealth,
-        );
-        this.gameOver = "DRAW";
-        this.drawBestTeam = teamStats[0];
-        this.showEndOverlay();
+        teamStats.sort((a, b) => {
+          if (b.through !== a.through) return b.through - a.through;
+          if (this.tiebreaker === "health")
+            return b.totalHealth - a.totalHealth;
+          return a.lastThrough - b.lastThrough; // lower = earlier = faster
+        });
+        const best = teamStats[0];
+        if (best.through === 0) {
+          this.gameOver = "BIG_RED_WINS";
+          this.showEndOverlay();
+        } else {
+          this.gameOver = "ESCAPED";
+          this.escapedTeam = {
+            name: best.name,
+            color: best.color,
+            through: best.through,
+            totalHealth: best.totalHealth,
+            lastThrough: best.lastThrough,
+          };
+          this.showEndOverlay();
+        }
       }
     }
 
-    // Gate ticking — always runs so the gate continues closing after ESCAPED/DRAW
+    // Gate ticking — always runs so the gate continues closing after ESCAPED
     if (this.finishActive) {
       if (this.gameOver === "BIG_RED_WINS") {
         this.finishGateAge = Math.max(0, this.finishGateAge - dt * 2);
@@ -699,10 +677,10 @@ export class Game {
         : this.allBallsSpeedScale;
     const spinDrive =
       ball.type === "large"
-        ? this.gameOver === "ESCAPED" || this.gameOver === "DRAW"
+        ? this.gameOver === "ESCAPED"
           ? 0
           : CONFIG.LARGE_SPIN_DRIVE
-        : this.gameOver === "DRAW"
+        : this.gameOver === "ESCAPED"
           ? 0
           : ball.spinDrive;
     ball.omega += spinDrive * speedScale * dt;
@@ -719,10 +697,10 @@ export class Game {
     // Minimum spin scales with speedScale: zero when paused, full minimum when running
     const minOmega =
       (ball.type === "large"
-        ? this.gameOver === "ESCAPED" || this.gameOver === "DRAW"
+        ? this.gameOver === "ESCAPED"
           ? 0
           : CONFIG.MIN_OMEGA_LARGE
-        : ball.finished || this.gameOver === "DRAW"
+        : ball.finished || this.gameOver === "ESCAPED"
           ? 0
           : CONFIG.MIN_OMEGA_SMALL) * speedScale;
     ball.omega = Math.max(ball.omega, minOmega);
@@ -747,6 +725,8 @@ export class Game {
         ball.y + ball.radius > CONFIG.SCENE_HEIGHT - doorReach;
       if (!blockedByTop && !blockedByBottom) {
         ball.finished = true;
+        ball.finishedAt = this.elapsedMs;
+        ball.healthAtFinish = ball.health;
         ball.spinDrive = 0;
         ball.omega = Math.min(ball.omega, ball.vx / ball.radius);
       }
@@ -824,7 +804,7 @@ export class Game {
       targetX = clamp(
         gateCentreTarget,
         0,
-        CONFIG.SCENE_WIDTH - this.canvas.clientWidth,
+        this.sceneWidth - this.canvas.clientWidth,
       );
       // Stop scrolling once the gate is already centred
       if (Math.abs(this.cameraX - targetX) < 1) return;
@@ -832,7 +812,7 @@ export class Game {
       targetX = clamp(
         this.largeBall.x - CONFIG.CAMERA_OFFSET_X,
         0,
-        CONFIG.SCENE_WIDTH - this.canvas.clientWidth,
+        this.sceneWidth - this.canvas.clientWidth,
       );
     }
     this.cameraX = lerp(this.cameraX, targetX, CONFIG.CAMERA_LERP);
@@ -846,8 +826,14 @@ export class Game {
       : `Time ${formatTime(this.gameDurationMs - this.elapsedMs)}`;
     this.ui.aliveSummary.innerText = `Alive ${aliveBalls} / ${CONFIG.BALL_COUNT}`;
 
+    const chunkWidth = this.sceneWidth / this.terrainChunks;
+    const segmentsSeen = Math.min(
+      Math.floor((this.cameraX + this.canvas.clientWidth) / chunkWidth),
+      this.terrainChunks,
+    );
     this.ui.diagnostics.innerHTML = `
       <div class="diagnostics__row"><span>Seed</span><span class="diagnostics__value">${this.seed.toString(16).toUpperCase()}</span></div>
+      <div class="diagnostics__row"><span>Segments</span><span class="diagnostics__value">${segmentsSeen} / ${this.terrainChunks}</span></div>
       <div class="diagnostics__row"><span>Big Red vx</span><span class="diagnostics__value">${Math.round(this.largeBall.vx)}</span></div>
       <div class="diagnostics__row"><span>Big Red vy</span><span class="diagnostics__value">${Math.round(this.largeBall.vy)}</span></div>
       <div class="diagnostics__row"><span>Speed scale</span><span class="diagnostics__value">${(this.largeBallSpeedScale * this.allBallsSpeedScale).toFixed(2)}</span></div>
@@ -914,6 +900,8 @@ export class Game {
       } else {
         fill.style.width = `${clamp(ball.health / CONFIG.SMALL_BALL_HEALTH, 0, 1) * 100}%`;
         track.classList.remove("team-track--dead", "team-track--finished");
+        const staleCheck = track.querySelector(".team-check");
+        if (staleCheck) staleCheck.remove();
       }
     });
   }

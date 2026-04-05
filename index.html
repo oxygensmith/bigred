@@ -32,14 +32,24 @@
                 <div class="duration-picker">
                   <button class="duration-btn" data-ms="120000">2 min</button>
                   <button class="duration-btn" data-ms="180000">3 min</button>
-                  <button
-                    class="duration-btn duration-btn--selected"
-                    data-ms="300000"
-                  >
-                    5 min
-                  </button>
+                  <button class="duration-btn duration-btn--selected" data-ms="300000">5 min</button>
                   <button class="duration-btn" data-ms="600000">10 min</button>
                   <button class="duration-btn" data-ms="1200000">20 min</button>
+                </div>
+              </div>
+              <div class="start-overlay__section">
+                <p class="start-overlay__label">Landscape</p>
+                <div class="duration-picker">
+                  <button class="landscape-btn" data-smoothness="36">Rocky</button>
+                  <button class="landscape-btn landscape-btn--selected" data-smoothness="80">Average</button>
+                  <button class="landscape-btn" data-smoothness="180">Gentle</button>
+                </div>
+              </div>
+              <div class="start-overlay__section">
+                <p class="start-overlay__label">More survivors wins. Tiebreaker</p>
+                <div class="duration-picker tiebreaker-picker">
+                  <button class="tiebreaker-btn tiebreaker-btn--selected" data-tb="health">Highest total health</button>
+                  <button class="tiebreaker-btn" data-tb="speed">Fastest through gate</button>
                 </div>
               </div>
               <button id="start-btn" class="start-btn">Start</button>
