@@ -4,20 +4,21 @@ const CONFIG = {
   SCENE_HEIGHT: 640, // World height in px (also canvas height)
   LANDSCAPE_SMOOTHNESS: 58, // Pixel width per terrain segment. Lower = rockier (~20), higher = smoother rolling hills (~360)
   GAME_DURATION_MS: 300000, // Default time until the finish gate opens (ms) — overridden by start screen selection
-  // FINISH_LINE_X is not fixed — it is set dynamically when the timer hits zero
+  // FINISH_LINE_X is not fixed —  it is set dynamically when the timer hits zero
   FINISH_GATE_CLOSE_SECS: 12, // Seconds for the doors to fully close after the gate appears
   FINISH_GATE_WIDTH: 18, // Visual thickness of each door panel (px)
-  GRAVITY: 120, // Downward acceleration (px/s²)
+  GRAVITY: 360, // Downward acceleration (px/s²)
 
   // ─── Balls ────────────────────────────────────────────────────────────────
   BALL_COUNT: 21, // Number of small balls (max = BALL_ROSTER.length)
   LARGE_BALL_RADIUS: 96, // Big Red's radius in px
-  SMALL_BALL_RADIUS: 8, // Small ball radius in px
+  SMALL_BALL_RADIUS: 20, // Small ball radius in px
   SMALL_BALL_HEALTH: 64, // HP each small ball starts with
 
   // ─── Per-ball variance ────────────────────────────────────────────────────
   // Each stat is multiplied by (1 + rand(-VAR, +VAR)) at spawn.
   // All variance is seeded so the same seed always gives the same ball stats.
+  VARIANCE_TYPE: "team", // "individual" = each ball rolls its own stats; "team" = all balls on a team share the same stats
   SPIN_DRIVE_VARIANCE: 0.15, // ±15% on spinDrive
   ROLLING_GRIP_VARIANCE: 0.15, // ±15% on rollingGrip
   AIR_DECAY_VARIANCE: 0.004, // ±0.004 on spinAirDecay (absolute, not relative)
@@ -30,7 +31,7 @@ const CONFIG = {
   SMALL_SPIN_DRIVE: 48, // Angular acceleration from self-propulsion (rad/s²), small balls
   LARGE_SPIN_DRIVE: 8, // Angular acceleration from self-propulsion (rad/s²), Big Red
   ROLLING_GRIP: 20, // Coupling strength between omega and vx (per second)
-  SPIN_AIR_DECAY: 0.996, // Omega multiplier applied per frame while airborne
+  SPIN_AIR_DECAY: 0.9, // was 0.996, // Omega multiplier applied per frame while airborne
   MIN_OMEGA_SMALL: 1.5, // Minimum omega for small balls (rad/s) — the "lowest gear"
   MIN_OMEGA_LARGE: 0.25, // Minimum omega for Big Red (rad/s)
   SPIN_TRANSFER: 0.72, // Fraction of Big Red's surface speed transferred to a small ball on contact
@@ -235,7 +236,11 @@ export class Game {
 
     this.terrainChunks = Math.round((this.gameDurationMs / 1000) * 10);
     this.sceneWidth = this.terrainChunks * CONFIG.LANDSCAPE_SMOOTHNESS;
-    this.terrain = createTerrain(this.sceneWidth, CONFIG.SCENE_HEIGHT, this.terrainChunks);
+    this.terrain = createTerrain(
+      this.sceneWidth,
+      CONFIG.SCENE_HEIGHT,
+      this.terrainChunks,
+    );
     this.largeBall = {
       type: "large",
       x: 120,
@@ -258,11 +263,30 @@ export class Game {
       [spawnSlots[i], spawnSlots[j]] = [spawnSlots[j], spawnSlots[i]];
     }
 
+    // Pre-generate one variance set per team when VARIANCE_TYPE is "team"
+    const teamVariances = {};
+    if (CONFIG.VARIANCE_TYPE === "team") {
+      const teams = [...new Set(BALL_ROSTER.map((b) => b.team))];
+      teams.forEach((team) => {
+        const tv = (variance) => 1 + (rng() * 2 - 1) * variance;
+        teamVariances[team] = {
+          spinDrive: tv(CONFIG.SPIN_DRIVE_VARIANCE),
+          rollingGrip: tv(CONFIG.ROLLING_GRIP_VARIANCE),
+          airDecay: (rng() * 2 - 1) * CONFIG.AIR_DECAY_VARIANCE,
+          bounciness: tv(CONFIG.BOUNCE_VARIANCE),
+          radius: (rng() * 2 - 1) * CONFIG.RADIUS_VARIANCE,
+        };
+      });
+    }
+
     this.smallBalls = BALL_ROSTER.slice(0, CONFIG.BALL_COUNT).map(
       (entry, index) => {
-        const v = (variance) => 1 + (rng() * 2 - 1) * variance;
-        const radius =
-          CONFIG.SMALL_BALL_RADIUS + (rng() * 2 - 1) * CONFIG.RADIUS_VARIANCE;
+        const teamV = teamVariances[entry.team];
+        const iv = (variance) => 1 + (rng() * 2 - 1) * variance; // individual draw
+        const radiusDelta = teamV
+          ? teamV.radius
+          : (rng() * 2 - 1) * CONFIG.RADIUS_VARIANCE;
+        const radius = CONFIG.SMALL_BALL_RADIUS + radiusDelta;
         return {
           id: index + 1,
           type: "small",
@@ -276,11 +300,20 @@ export class Game {
           omega: 6 + rng() * 4,
           angle: rng() * Math.PI * 2,
           radius,
-          spinDrive: CONFIG.SMALL_SPIN_DRIVE * v(CONFIG.SPIN_DRIVE_VARIANCE),
-          rollingGrip: CONFIG.ROLLING_GRIP * v(CONFIG.ROLLING_GRIP_VARIANCE),
+          spinDrive:
+            CONFIG.SMALL_SPIN_DRIVE *
+            (teamV ? teamV.spinDrive : iv(CONFIG.SPIN_DRIVE_VARIANCE)),
+          rollingGrip:
+            CONFIG.ROLLING_GRIP *
+            (teamV ? teamV.rollingGrip : iv(CONFIG.ROLLING_GRIP_VARIANCE)),
           airDecay:
-            CONFIG.SPIN_AIR_DECAY + (rng() * 2 - 1) * CONFIG.AIR_DECAY_VARIANCE,
-          bounciness: CONFIG.GROUND_BOUNCE_SMALL * v(CONFIG.BOUNCE_VARIANCE),
+            CONFIG.SPIN_AIR_DECAY +
+            (teamV
+              ? teamV.airDecay
+              : (rng() * 2 - 1) * CONFIG.AIR_DECAY_VARIANCE),
+          bounciness:
+            CONFIG.GROUND_BOUNCE_SMALL *
+            (teamV ? teamV.bounciness : iv(CONFIG.BOUNCE_VARIANCE)),
           health: CONFIG.SMALL_BALL_HEALTH,
           alive: true,
           finished: false,
