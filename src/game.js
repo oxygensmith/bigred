@@ -811,6 +811,29 @@ export class Game {
       ball.vx *= Math.pow(groundFriction, dt * 60);
     }
 
+    // Ceiling bounce — flat surface, normal points downward (0, 1)
+    if (ball.y - ball.radius < 0) {
+      ball.y = ball.radius;
+      if (ball.vy < 0) {
+        const bounce =
+          ball.type === "small" ? ball.bounciness : CONFIG.GROUND_BOUNCE_LARGE;
+        ball.vy = -bounce * ball.vy;
+        // Rolling grip at ceiling (contact point inverted, so omega coupling flips sign)
+        const grip =
+          ball.type === "small" ? ball.rollingGrip : CONFIG.ROLLING_GRIP;
+        const contactSpeed = -ball.omega * ball.radius;
+        const slip = contactSpeed - ball.vx;
+        ball.vx += slip * grip * dt;
+        ball.omega -= (slip * grip * dt) / ball.radius;
+        // Same rolling resistance as the ground
+        const ceilFriction =
+          ball.type === "small"
+            ? CONFIG.SMALL_GROUND_FRICTION
+            : CONFIG.GROUND_FRICTION;
+        ball.vx *= Math.pow(ceilFriction, dt * 60);
+      }
+    }
+
     const airDrag =
       ball.type === "large" ? CONFIG.LARGE_AIR_DRAG : CONFIG.SMALL_AIR_DRAG;
     ball.vx *= Math.pow(airDrag, dt * 60);
