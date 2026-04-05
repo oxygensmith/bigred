@@ -1,0 +1,14 @@
+{
+  "name": "procedural-chase",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "parcel index.html",
+    "build": "parcel build index.html"
+  },
+  "devDependencies": {
+    "@parcel/transformer-sass": "^2.16.4",
+    "parcel": "^2.14.0",
+    "sass": "^1.75.0"
+  }
+}
