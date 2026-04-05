@@ -102,7 +102,7 @@ so balls will still differ from each other. */
      12 — (default) Big Red rolls through with authority, small balls scatter
      20+ — Big Red is essentially immovable; feels more like a wall than a ball */
   DAMAGE_PER_SECOND: 32, // HP/s drained from a small ball while touching Big Red
-  LARGE_BALL_GROWTH_PER_KILL: 1, // Extra px added per kill number (kill 1 = +2px, kill 2 = +4px, …). Set 0 to disable.
+  LARGE_BALL_GROWTH_PER_KILL: 3, // Flat px added to radius per kill. Set 0 to disable.
   LARGE_BALL_GROWTH_SPEED: 3, // How fast radius lerps to its target size (higher = faster growth animation)
 
   // ─── Terrain generation ───────────────────────────────────────────────────
@@ -974,8 +974,7 @@ export class Game {
           small.vx = 0;
           small.vy = 0;
           this.killCount++;
-          this.largeBall.targetRadius +=
-            CONFIG.LARGE_BALL_GROWTH_PER_KILL * this.killCount;
+          this.largeBall.targetRadius += CONFIG.LARGE_BALL_GROWTH_PER_KILL;
           for (let i = 0; i < 16; i++) {
             const angle = (i / 16) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
             const speed = 60 + Math.random() * 140;

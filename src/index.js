@@ -51,5 +51,9 @@ window.addEventListener("DOMContentLoaded", () => {
     game.begin(selectedDuration, selectedTiebreaker, selectedSmoothness);
   });
 
+  document.getElementById("restart-btn").addEventListener("click", () => {
+    game.showStartScreen();
+  });
+
   game.showStartScreen();
 });
