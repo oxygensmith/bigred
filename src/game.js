@@ -1,3 +1,5 @@
+import { AudioEngine } from "./audio.js";
+
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
   // SCENE_WIDTH is not fixed — calculated at game start as terrainChunks × LANDSCAPE_SMOOTHNESS
@@ -11,8 +13,8 @@ const CONFIG = {
 
   // ─── Balls ────────────────────────────────────────────────────────────────
   BALL_COUNT: 21, // Number of small balls (max = BALL_ROSTER.length)
-  LARGE_BALL_RADIUS: 96, // Big Red's radius in px
-  SMALL_BALL_RADIUS: 20, // Small ball radius in px
+  LARGE_BALL_RADIUS: 48, // Big Red's starting radius in px
+  SMALL_BALL_RADIUS: 10, // Small ball radius in px
   SMALL_BALL_HEALTH: 64, // HP each small ball starts with
 
   // ─── Per-ball variance ────────────────────────────────────────────────────
@@ -23,43 +25,68 @@ const CONFIG = {
   ROLLING_GRIP_VARIANCE: 0.15, // ±15% on rollingGrip
   AIR_DECAY_VARIANCE: 0.004, // ±0.004 on spinAirDecay (absolute, not relative)
   BOUNCE_VARIANCE: 0.1, // ±10% on bounciness
-  RADIUS_VARIANCE: 2, // ±2px on radius (absolute)
+  RADIUS_VARIANCE: 0, // ±2px on radius (absolute)
 
   // ─── Rotation / rolling (the "bicycle engine") ────────────────────────────
   // Each ball has an angular velocity (omega, rad/s). Self-torque spins them
   // up; rolling grip on the ground converts omega → vx (and vice-versa).
-  SMALL_SPIN_DRIVE: 48, // Angular acceleration from self-propulsion (rad/s²), small balls
-  LARGE_SPIN_DRIVE: 8, // Angular acceleration from self-propulsion (rad/s²), Big Red
-  ROLLING_GRIP: 20, // Coupling strength between omega and vx (per second)
+  SMALL_SPIN_DRIVE: 90, // Angular acceleration from self-propulsion (rad/s²), small balls
+  LARGE_SPIN_DRIVE: 24, // Angular acceleration from self-propulsion (rad/s²), Big Red
+  ROLLING_GRIP: 32, // Coupling strength between omega and vx (per second)
   SPIN_AIR_DECAY: 0.9, // was 0.996, // Omega multiplier applied per frame while airborne
   MIN_OMEGA_SMALL: 1.5, // Minimum omega for small balls (rad/s) — the "lowest gear"
   MIN_OMEGA_LARGE: 0.25, // Minimum omega for Big Red (rad/s)
   SPIN_TRANSFER: 0.72, // Fraction of Big Red's surface speed transferred to a small ball on contact
 
+  /* Speed up small balls rolling — existing variables:
+
+Variable	        Current	     Direction
+SMALL_SPIN_DRIVE	48	         Raise (try 72, 96)
+ROLLING_GRIP	    10	         Raise (try 16, 24)
+SMALL_MAX_SPEED	  300	         Raise (try 420, 520)
+MIN_OMEGA_SMALL	  1.5	         Raise slightly (try 2.5)
+
+SMALL_SPIN_DRIVE and ROLLING_GRIP together 
+are the most effective — drive builds the 
+rotational energy, grip is how fast that becomes forward speed on the ground. They'
+re also subject to SPIN_DRIVE_VARIANCE and ROLLING_GRIP_VARIANCE, 
+so balls will still differ from each other. */
+
   // ─── Speed limits ─────────────────────────────────────────────────────────
-  SMALL_MAX_SPEED: 300, // Max vx for small balls (px/s)
-  LARGE_MAX_SPEED: 520, // Max vx for Big Red (px/s)
+  SMALL_MAX_SPEED: 750, // Max vx for small balls (px/s)
+  LARGE_MAX_SPEED: 550, // Max vx for Big Red (px/s)
 
   // ─── Spawn ────────────────────────────────────────────────────────────────
-  SPAWN_X_START: 300, // World x of the leftmost spawn slot
+  SPAWN_X_START: 500, // World x of the leftmost spawn slot
   SPAWN_X_SPACING: 22, // px between each spawn slot
   SPAWN_Y_BASE: 80, // Canvas y of the spawn drop point
-  SPAWN_Y_JITTER: 40, // Max random y offset per ball
+  SPAWN_Y_JITTER: 140, // Max random y offset per ball
   SPAWN_VX_BASE: 40, // Initial rightward speed (px/s)
-  SPAWN_VX_JITTER: 30, // Max random addition to starting vx
+  SPAWN_VX_JITTER: 60, // Max random addition to starting vx
 
   // ─── Ground physics ───────────────────────────────────────────────────────
   GROUND_BOUNCE_LARGE: 0.48, // Normal-velocity restitution for Big Red on ground impact
   GROUND_BOUNCE_SMALL: 0.78, // Normal-velocity restitution for small balls on ground impact
   GROUND_FRICTION: 0.998, // Rolling-resistance multiplier on vx per frame, Big Red
   SMALL_GROUND_FRICTION: 0.999, // Rolling-resistance multiplier on vx per frame, small balls
-  AIR_DRAG: 0.9993, // vx multiplier per frame while airborne (both ball types)
+  LARGE_AIR_DRAG: 0.998, // vx multiplier per frame while Big Red is airborne (lower = more drag)
+  SMALL_AIR_DRAG: 0.9993, // vx multiplier per frame while small balls are airborne
   STUCK_SLOPE_THRESHOLD: 0.8, // Uphill slope magnitude at which a slow small ball is considered stuck
+  UPHILL_SPIN_BOOST: 0.5, // Extra spin drive multiplier per unit of uphill slope for small balls on the ground (higher = more furious climbing)
+  UPHILL_VISUAL_SPIN: 18, // Extra visual rotation speed (rad/s) per unit of uphill slope — purely cosmetic panic spin
+  LARGE_UPHILL_SPIN_BOOST: 0.5, // Extra spin drive multiplier per unit of uphill slope for Big Red (needs higher value since LARGE_SPIN_DRIVE is much smaller)
+
+  // ─── Ground shake ─────────────────────────────────────────────────────────
+  SHAKE_THRESHOLD: 90, // Minimum ground-impact speed (px/s normal velocity) to trigger shake
+  SHAKE_AMPLITUDE: 15, // Peak camera shake in px at full impact
+  SHAKE_DECAY: 12, // How fast shake fades — amplitude multiplied by e^(-SHAKE_DECAY * dt) per frame
+  LARGE_STUCK_SLOPE_THRESHOLD: 0.6, // Uphill slope magnitude at which Big Red is considered stuck (lower = triggers earlier)
+  LARGE_STUCK_VX_THRESHOLD: 60, // Big Red's vx must be below this to trigger the uphill assist
 
   // ─── Big Red catchup ──────────────────────────────────────────────────────
   // When the rearmost small ball is far ahead, Big Red gets an omega boost.
   LARGE_CATCHUP_DISTANCE: 500, // Gap (px) before catchup kicks in
-  LARGE_CATCHUP_ACCELERATION: 180, // Extra angular acceleration added during catchup (px/s² ÷ radius)
+  LARGE_CATCHUP_ACCELERATION: 150, // Extra angular acceleration added during catchup (px/s² ÷ radius)
 
   // ─── Back wall ────────────────────────────────────────────────────────────
   // A visible 20 px-wide wall that drifts just behind the camera's left edge.
@@ -69,12 +96,14 @@ const CONFIG = {
   BACKWALL_VX_SMALL: 800, // vx set on small balls on wall contact (px/s) — instant lurch
 
   // ─── Combat ───────────────────────────────────────────────────────────────
-  LARGE_BALL_MASS_RATIO: 12, // Big Red's mass relative to a small ball. Higher = less recoil on Big Red, harder impact on small balls.
+  LARGE_BALL_MASS_RATIO: 16, // Big Red's mass relative to a small ball. Higher = less recoil on Big Red, harder impact on small balls.
   /* Tuning guide:
      6 — noticeable, but Big Red still wobbles a bit on direct hits
      12 — (default) Big Red rolls through with authority, small balls scatter
      20+ — Big Red is essentially immovable; feels more like a wall than a ball */
   DAMAGE_PER_SECOND: 32, // HP/s drained from a small ball while touching Big Red
+  LARGE_BALL_GROWTH_PER_KILL: 1, // Extra px added per kill number (kill 1 = +2px, kill 2 = +4px, …). Set 0 to disable.
+  LARGE_BALL_GROWTH_SPEED: 3, // How fast radius lerps to its target size (higher = faster growth animation)
 
   // ─── Terrain generation ───────────────────────────────────────────────────
   TERRAIN_CHUNKS: 750, // Not used at runtime — chunk count is auto-calculated as 10 segments/sec of game duration
@@ -84,6 +113,8 @@ const CONFIG = {
   TERRAIN_SMOOTHING: 0.5, // How strongly each chunk pulls toward the envelope (0=none, 1=full)
   TERRAIN_MIN_Y: 260, // Highest point terrain can reach (px from top)
   TERRAIN_MAX_Y_OFFSET: 80, // Minimum distance from the bottom of the canvas (px)
+  TERRAIN_STREAK_LENGTH: 12, // Max consecutive segments that can share the same up/down direction
+  TERRAIN_STREAK_CHANCE: 0.78, // Probability (0–1) that the next segment continues in the same direction
 
   // ─── Camera ───────────────────────────────────────────────────────────────
   CAMERA_OFFSET_X: 180, // How far from the left edge Big Red is kept (px)
@@ -139,9 +170,9 @@ const BALL_ROSTER = [
   { color: "#cc00ff", name: "Violet", team: "Violet" },
   { color: "#ee44ff", name: "Grey-Violet", team: "Violet" },
   // ── Grey ────────────────────────────────────────────────────────────────
-  { color: "#aa88bb", name: "Violet-Grey", team: "Grey" },
-  { color: "#888888", name: "Grey", team: "Grey" },
-  { color: "#aaaaaa", name: "Cool Grey", team: "Grey" },
+  { color: "#555555", name: "Dark Grey", team: "Grey" },
+  { color: "#999999", name: "Grey", team: "Grey" },
+  { color: "#aaaaaa", name: "Light Grey", team: "Grey" },
 ];
 
 const BIG_RED_SVG = `<svg id="big-red" data-name="big-red" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
@@ -152,15 +183,36 @@ const createTerrain = (width, height, chunks) => {
   const points = [];
   const chunkWidth = width / chunks;
   let y = height - 100;
+  const minY = CONFIG.TERRAIN_MIN_Y;
+  const maxY = height - CONFIG.TERRAIN_MAX_Y_OFFSET;
+
+  // Directional streak state: dir = 1 (going down in canvas = valley) or -1 (going up = hill)
+  let streakDir = Math.random() < 0.5 ? 1 : -1;
+  let streakCount = 0;
 
   for (let i = 0; i <= chunks; i += 1) {
+    // Decide direction for this segment
+    if (
+      streakCount > 0 &&
+      streakCount <= CONFIG.TERRAIN_STREAK_LENGTH &&
+      Math.random() < CONFIG.TERRAIN_STREAK_CHANCE
+    ) {
+      streakCount++;
+    } else {
+      streakDir = Math.random() < 0.5 ? 1 : -1;
+      streakCount = 1;
+    }
+
+    // Force reversal when pressed against a boundary
+    if (y <= minY + 20) streakDir = 1;
+    if (y >= maxY - 20) streakDir = -1;
+
     const target =
       CONFIG.TERRAIN_BASE_Y +
       Math.sin((i / chunks) * Math.PI * 2) * CONFIG.TERRAIN_PEAK_AMPLITUDE;
-    y +=
-      (target - y) * CONFIG.TERRAIN_SMOOTHING +
-      (Math.random() - 0.5) * CONFIG.TERRAIN_RANDOM_DELTA;
-    y = clamp(y, CONFIG.TERRAIN_MIN_Y, height - CONFIG.TERRAIN_MAX_Y_OFFSET);
+    const jitter = Math.random() * CONFIG.TERRAIN_RANDOM_DELTA;
+    y += (target - y) * CONFIG.TERRAIN_SMOOTHING + streakDir * jitter;
+    y = clamp(y, minY, maxY);
     points.push({ x: i * chunkWidth, y });
   }
 
@@ -198,6 +250,8 @@ export class Game {
     this.elapsedMs = 0;
     this.cameraX = 0;
     this.finishActive = false;
+
+    this.audio = new AudioEngine();
 
     this.bigRedImage = new Image();
     this.bigRedImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(BIG_RED_SVG)}`;
@@ -250,8 +304,10 @@ export class Game {
       omega: 260 / CONFIG.LARGE_BALL_RADIUS,
       angle: 0,
       radius: CONFIG.LARGE_BALL_RADIUS,
+      targetRadius: CONFIG.LARGE_BALL_RADIUS,
       color: "#e8493f",
     };
+    this.killCount = 0;
 
     // Build shuffled spawn slots using seeded RNG
     const spawnSlots = Array.from(
@@ -319,6 +375,7 @@ export class Game {
           finished: false,
           finishedAt: null,
           healthAtFinish: 0,
+          hitCooldown: 0,
           stuck: false,
         };
       },
@@ -326,6 +383,8 @@ export class Game {
 
     this.backWallRightX = 0;
     this.backWallFlash = 0;
+    this.shakeAmplitude = 0;
+    this.shakePhase = 0;
     this.particles = [];
     this.paused = false;
     this.largeBallPaused = false;
@@ -350,6 +409,7 @@ export class Game {
   }
 
   begin(durationMs, tiebreaker, landscapeSmoothness) {
+    this.audio.init();
     this.gameDurationMs = durationMs;
     this.tiebreaker = tiebreaker;
     CONFIG.LANDSCAPE_SMOOTHNESS = landscapeSmoothness;
@@ -389,6 +449,9 @@ export class Game {
     }
 
     o.classList.remove("end-overlay--hidden");
+
+    if (isEscaped) this.audio.playEscaped();
+    else this.audio.playBigRedWins();
   }
 
   resize() {
@@ -492,6 +555,8 @@ export class Game {
     this.backWallRightX =
       this.cameraX + 75 + 50 * Math.sin((this.elapsedMs / 1000) * 0.4);
     this.backWallFlash = Math.max(0, this.backWallFlash - dt * 3);
+    this.shakeAmplitude *= Math.exp(-CONFIG.SHAKE_DECAY * dt);
+    this.shakePhase += dt * 60; // vibrato frequency ~60 rad/s
 
     const lerpRate = 1 - Math.pow(0.001, dt * 4);
     this.largeBallSpeedScale = lerp(
@@ -507,6 +572,14 @@ export class Game {
 
     this.updateBall(this.largeBall, dt);
     this.smallBalls.forEach((ball) => this.updateBall(ball, dt));
+
+    // Smoothly grow Big Red toward his target radius after each kill
+    if (this.largeBall.radius < this.largeBall.targetRadius) {
+      this.largeBall.radius = Math.min(
+        this.largeBall.targetRadius,
+        this.largeBall.radius + CONFIG.LARGE_BALL_GROWTH_SPEED * dt,
+      );
+    }
 
     const laggingBall = this.smallBalls
       .filter((ball) => ball.alive && !ball.finished)
@@ -537,6 +610,9 @@ export class Game {
       p.y += p.vy * dt;
       p.alpha -= dt * 1.4;
     });
+    this.smallBalls.forEach((b) => {
+      if (b.hitCooldown > 0) b.hitCooldown -= dt;
+    });
 
     this.resolveCollisions(dt);
     this.updateCamera(dt);
@@ -545,6 +621,13 @@ export class Game {
 
   updateBall(ball, dt) {
     if (ball.type === "small" && !ball.alive) return;
+    // Once Big Red wins, stop updating it after it's rolled 400px off the right of the frozen camera
+    if (
+      ball.type === "large" &&
+      this.gameOver === "BIG_RED_WINS" &&
+      ball.x - ball.radius > this.cameraX + this.canvas.clientWidth + 400
+    )
+      return;
     if (ball.type === "small" && ball.finished) {
       // Finished balls still run physics so they coast to a stop naturally —
       // only skip the spin drive and gate-crossing logic handled elsewhere.
@@ -572,7 +655,7 @@ export class Game {
         ball.omega -= (slip * ball.rollingGrip * dt) / ball.radius;
         ball.vx *= Math.pow(CONFIG.SMALL_GROUND_FRICTION, dt * 60);
       }
-      ball.vx *= Math.pow(CONFIG.AIR_DRAG, dt * 60);
+      ball.vx *= Math.pow(CONFIG.SMALL_AIR_DRAG, dt * 60);
       ball.omega *= Math.pow(ball.airDecay, dt * 60);
       ball.angle += ball.omega * dt;
 
@@ -598,12 +681,7 @@ export class Game {
           ball.vy = 0;
           return;
         }
-        // Big Red wins — let it roll through; right wall is half-canvas beyond the gate
-        const rightWall = this.finishLineX + this.canvas.clientWidth / 2;
-        if (ball.x + ball.radius >= rightWall) {
-          ball.x = rightWall - ball.radius - 1;
-          ball.vx = -Math.abs(ball.vx);
-        }
+        // Big Red wins — let it roll freely off the right side of the screen
       }
       // Small balls are blocked if the door has closed over their y position
       if (ball.type === "small") {
@@ -642,6 +720,7 @@ export class Game {
     const slope = this.terrain.getSlope(ball.x);
     const belowGround = ball.y + ball.radius > groundY;
 
+    let visualSpinBoost = 0;
     if (belowGround) {
       ball.y = groundY - ball.radius;
 
@@ -663,6 +742,17 @@ export class Game {
         const vty = ball.vy - vn * ny;
         ball.vx = vtx + -baseBounce * vn * nx;
         ball.vy = vty + -baseBounce * vn * ny;
+
+        // Ground shake: Big Red landing hard triggers camera vibrato
+        if (ball.type === "large" && -vn > CONFIG.SHAKE_THRESHOLD) {
+          const impact = clamp((-vn - CONFIG.SHAKE_THRESHOLD) / 300, 0, 1);
+          this.shakeAmplitude = Math.max(
+            this.shakeAmplitude,
+            impact * CONFIG.SHAKE_AMPLITUDE,
+          );
+          this.shakePhase = 0;
+          this.audio.playGroundImpact(impact);
+        }
       }
 
       // Rolling grip: omega drives vx; excess slip exchanges energy between them
@@ -677,16 +767,39 @@ export class Game {
       // and decelerates it uphill — gravity component along surface
       ball.omega += ((CONFIG.GRAVITY * slope) / (len * ball.radius)) * dt;
 
+      // On uphills, small balls spin harder — counteracts the slope-gravity omega drain
+      const uphill = Math.max(0, -slope);
+      if (uphill > 0) {
+        if (ball.type === "small") {
+          ball.omega += uphill * CONFIG.UPHILL_SPIN_BOOST * ball.spinDrive * dt;
+          visualSpinBoost = uphill * CONFIG.UPHILL_VISUAL_SPIN;
+        } else {
+          ball.omega +=
+            uphill *
+            CONFIG.LARGE_UPHILL_SPIN_BOOST *
+            CONFIG.LARGE_SPIN_DRIVE *
+            dt;
+        }
+      }
+
       // On steep uphills, nudge the ball over the crest rather than damping it further
       if (ball.type === "small") {
-        const uphill = Math.max(0, -slope);
         if (uphill > CONFIG.STUCK_SLOPE_THRESHOLD && ball.vx < 30) {
           ball.stuck = true;
-          // Kick forward and upward along the slope so it crests instead of stalling
           ball.vx += uphill * 60 * dt;
           ball.vy -= uphill * 40 * dt;
         } else {
           ball.stuck = false;
+        }
+      } else if (ball.type === "large") {
+        if (
+          uphill > CONFIG.LARGE_STUCK_SLOPE_THRESHOLD &&
+          ball.vx < CONFIG.LARGE_STUCK_VX_THRESHOLD
+        ) {
+          // Scale kick by radius so it stays effective as Big Red grows
+          const scale = ball.radius / CONFIG.LARGE_BALL_RADIUS;
+          ball.vx += uphill * 80 * scale * dt;
+          ball.vy -= uphill * 50 * scale * dt;
         }
       }
 
@@ -698,7 +811,9 @@ export class Game {
       ball.vx *= Math.pow(groundFriction, dt * 60);
     }
 
-    ball.vx *= Math.pow(CONFIG.AIR_DRAG, dt * 60);
+    const airDrag =
+      ball.type === "large" ? CONFIG.LARGE_AIR_DRAG : CONFIG.SMALL_AIR_DRAG;
+    ball.vx *= Math.pow(airDrag, dt * 60);
     const maxSpeed =
       ball.type === "large" ? CONFIG.LARGE_MAX_SPEED : CONFIG.SMALL_MAX_SPEED;
     ball.vx = clamp(ball.vx, -maxSpeed, maxSpeed);
@@ -738,8 +853,8 @@ export class Game {
           : CONFIG.MIN_OMEGA_SMALL) * speedScale;
     ball.omega = Math.max(ball.omega, minOmega);
 
-    // Accumulate visual rotation angle
-    ball.angle += ball.omega * dt;
+    // Accumulate visual rotation angle — visualSpinBoost adds panicked spinning on uphills
+    ball.angle += (ball.omega + visualSpinBoost) * dt;
 
     if (
       ball.type === "small" &&
@@ -806,12 +921,38 @@ export class Game {
         // Also spin up the small ball — tangential impulse becomes angular momentum
         small.omega += spinImpulse / small.radius;
 
+        // Hit particles — spray in the direction away from Big Red, rate-limited
+        if (small.hitCooldown <= 0 && relVel > 20) {
+          small.hitCooldown = 0.12;
+          this.audio.playBallStruck();
+          const baseAngle = Math.atan2(normalY, normalX);
+          const spread = Math.PI * 0.4; // ±36° cone
+          const count = 4 + Math.floor(Math.random() * 3); // 4–6 particles
+          for (let i = 0; i < count; i++) {
+            const angle = baseAngle + (Math.random() - 0.5) * spread;
+            const speed = 80 + Math.random() * 120;
+            this.particles.push({
+              x: small.x + normalX * small.radius,
+              y: small.y + normalY * small.radius,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed - 30,
+              radius: 1.5 + Math.random() * 1.5,
+              alpha: 0.9,
+              color: small.color,
+            });
+          }
+        }
+
         small.health -= CONFIG.DAMAGE_PER_SECOND * dt;
         if (small.health <= 0) {
           small.health = 0;
           small.alive = false;
+          this.audio.playBallEliminated();
           small.vx = 0;
           small.vy = 0;
+          this.killCount++;
+          this.largeBall.targetRadius +=
+            CONFIG.LARGE_BALL_GROWTH_PER_KILL * this.killCount;
           for (let i = 0; i < 16; i++) {
             const angle = (i / 16) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
             const speed = 60 + Math.random() * 140;
@@ -830,6 +971,9 @@ export class Game {
   }
 
   updateCamera(dt) {
+    // Freeze camera when Big Red wins — let it roam off screen on its own
+    if (this.gameOver === "BIG_RED_WINS") return;
+
     let targetX;
     if (this.finishActive) {
       // Drift so the gate sits at the horizontal centre of the canvas
@@ -937,6 +1081,17 @@ export class Game {
         if (staleCheck) staleCheck.remove();
       }
     });
+
+    // Dim team label when every ball on that team is dead; highlight the winner
+    const winnerName =
+      this.gameOver === "ESCAPED" ? this.escapedTeam?.name : null;
+    this.ui.healthGrid.querySelectorAll(".team-group").forEach((group) => {
+      const team = group.dataset.team;
+      const teamBalls = this.smallBalls.filter((b) => b.team === team);
+      const allDead = teamBalls.length > 0 && teamBalls.every((b) => !b.alive);
+      group.classList.toggle("team-group--eliminated", allDead);
+      group.classList.toggle("team-group--winner", team === winnerName);
+    });
   }
 
   draw() {
@@ -949,7 +1104,8 @@ export class Game {
     ctx.fillRect(0, 0, width, height);
 
     ctx.save();
-    ctx.translate(-this.cameraX, 0);
+    const shakeY = Math.sin(this.shakePhase) * this.shakeAmplitude;
+    ctx.translate(-this.cameraX, shakeY);
     this.drawTerrain(ctx);
     this.drawBackWall(ctx);
     this.drawFinishLine(ctx);
@@ -974,7 +1130,7 @@ export class Game {
       ctx.globalAlpha = Math.max(0, p.alpha);
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      ctx.fillStyle = "#999";
+      ctx.fillStyle = p.color || "#999";
       ctx.fill();
       ctx.restore();
     });

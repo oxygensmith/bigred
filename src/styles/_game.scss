@@ -54,3 +54,13 @@
 /* .team-track--finished .team-bar-fill {
   // Colour stays as the ball's own colour — set via inline style
 } */
+
+.team-group--eliminated .team-label {
+  opacity: 0.3;
+  text-decoration: line-through;
+}
+
+.team-group--winner .team-label {
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.9), 0 0 24px rgba(255, 255, 255, 0.4);
+}
