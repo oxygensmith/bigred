@@ -124,6 +124,22 @@ window.addEventListener("DOMContentLoaded", () => {
 
   syncControlButtons();
 
+  // Auto-pause when the tab/window loses focus; resume only if we caused the pause
+  let autoPaused = false;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      if (!game.paused && !game.gameOver) {
+        game.togglePause();
+        autoPaused = true;
+      }
+    } else {
+      if (autoPaused && game.paused) {
+        game.togglePause();
+      }
+      autoPaused = false;
+    }
+  });
+
   const creditsModal = document.getElementById("credits-modal");
   const creditsBtn = document.getElementById("credits-btn");
   const creditsClose = document.getElementById("credits-close");
