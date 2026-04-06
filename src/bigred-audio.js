@@ -1,5 +1,5 @@
 // Synthesized sound effects via Web Audio API.
-// Sampled buffers are loaded asynchronously from sounds.js;
+// Sampled buffers are loaded asynchronously from bigred-sounds.js;
 // synthesized fallbacks play immediately while they arrive.
 
 const _b64ToBuffer = (b64) => {
@@ -23,12 +23,12 @@ export class AudioEngine {
   constructor() {
     this.ac = null;
     this.wailBuffer = null;
-    this.winBuffer  = null;
+    this.winBuffer = null;
     this.loseBuffer = null;
   }
 
   // Call once from a user-gesture handler (Start button) to unlock AudioContext.
-  // Pass useSampled=1 to load base64 samples from sounds.js; 0 for synth-only.
+  // Pass useSampled=1 to load base64 samples from bigred-sounds.js; 0 for synth-only.
   init(useSampled = 1) {
     if (this.ac) return;
     this.ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -36,18 +36,22 @@ export class AudioEngine {
   }
 
   _loadSamples() {
-    import("./sounds.js")
+    import("./bigred-sounds.js")
       .then(({ WAIL_B64, WIN_B64, LOSE_B64 }) => {
         const decode = (b64, key) =>
           this.ac
             .decodeAudioData(_b64ToBuffer(b64))
-            .then((buf) => { this[key] = buf; })
+            .then((buf) => {
+              this[key] = buf;
+            })
             .catch((e) => console.warn(`[audio] failed to decode ${key}:`, e));
         decode(WAIL_B64, "wailBuffer");
-        decode(WIN_B64,  "winBuffer");
+        decode(WIN_B64, "winBuffer");
         decode(LOSE_B64, "loseBuffer");
       })
-      .catch((e) => console.warn("[audio] failed to load sounds.js:", e));
+      .catch((e) =>
+        console.warn("[audio] failed to load bigred-sounds.js:", e),
+      );
   }
 
   // Resume context if the browser suspended it, then call fn
@@ -175,8 +179,12 @@ export class AudioEngine {
   }
 
   // End screen stings — sampled if loaded, synthesized fallback otherwise
-  playEscaped()    { this._playSample(this.winBuffer,  0.5, () => this._playEscapedSynth()); }
-  playBigRedWins() { this._playSample(this.loseBuffer, 0.5, () => this._playBigRedWinsSynth()); }
+  playEscaped() {
+    this._playSample(this.winBuffer, 0.5, () => this._playEscapedSynth());
+  }
+  playBigRedWins() {
+    this._playSample(this.loseBuffer, 0.5, () => this._playBigRedWinsSynth());
+  }
 
   _playWailSample() {
     const ac = this.ac;

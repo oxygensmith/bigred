@@ -61,10 +61,10 @@ npm run build    # production build → dist/
 
 ```
 src/
-  game.js          Main game loop, physics, rendering
-  audio.js         Web Audio engine — synthesized sounds and sample playback
-  sounds.js        Base64-encoded audio samples (loaded async at startup)
-  index.js         Entry point — wires canvas, UI refs, and start-screen controls
+  bigred-game.js          Main game loop, physics, rendering
+  bigred-audio.js         Web Audio engine — synthesized sounds and sample playback
+  bigred-sounds.js        Base64-encoded audio samples (loaded async at startup)
+  bigred-index.js         Entry point — wires canvas, UI refs, and start-screen controls
   styles/
     main.scss        Root stylesheet (imports all partials)
     _variables.scss  CSS custom properties

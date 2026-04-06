@@ -1,4 +1,4 @@
-import { AudioEngine } from "./audio.js";
+import { AudioEngine } from "./bigred-audio.js";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -1189,11 +1189,30 @@ export class Game {
   }
 
   drawTerrain(ctx) {
+    const width = this.canvas.clientWidth;
+    const allPoints = this.terrain.points;
+    const left  = this.cameraX - 60;
+    const right = this.cameraX + width + 60;
+
+    // Find index range covering the visible window, keeping one point outside
+    // each edge so the path reaches the screen border cleanly.
+    let startIdx = 0;
+    for (let i = 1; i < allPoints.length; i++) {
+      if (allPoints[i].x >= left) { startIdx = Math.max(0, i - 1); break; }
+    }
+    let endIdx = allPoints.length - 1;
+    for (let i = startIdx; i < allPoints.length; i++) {
+      if (allPoints[i].x > right) { endIdx = Math.min(allPoints.length - 1, i + 1); break; }
+    }
+    const points = allPoints.slice(startIdx, endIdx + 1);
+    if (points.length < 2) return;
+
     ctx.save();
+
+    // Filled terrain body
     ctx.beginPath();
-    const points = this.terrain.points;
     ctx.moveTo(points[0].x, points[0].y);
-    points.forEach((point) => ctx.lineTo(point.x, point.y));
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
     ctx.lineTo(points[points.length - 1].x, CONFIG.SCENE_HEIGHT);
     ctx.lineTo(points[0].x, CONFIG.SCENE_HEIGHT);
     ctx.closePath();
@@ -1204,12 +1223,14 @@ export class Game {
     ctx.fillStyle = gradient;
     ctx.fill();
 
+    // Surface stroke
     ctx.strokeStyle = "#6f7ac1";
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
-    points.forEach((point) => ctx.lineTo(point.x, point.y));
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
     ctx.stroke();
+
     ctx.restore();
   }
 

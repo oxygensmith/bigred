@@ -1,5 +1,5 @@
 import "./styles/main.scss";
-import { Game } from "./game.js";
+import { Game } from "./bigred-game.js";
 
 window.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("game-canvas");
@@ -32,7 +32,9 @@ window.addEventListener("DOMContentLoaded", () => {
   const landscapeBtns = document.querySelectorAll(".landscape-btn");
   landscapeBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
-      landscapeBtns.forEach((b) => b.classList.remove("landscape-btn--selected"));
+      landscapeBtns.forEach((b) =>
+        b.classList.remove("landscape-btn--selected"),
+      );
       btn.classList.add("landscape-btn--selected");
       selectedSmoothness = parseInt(btn.dataset.smoothness, 10);
     });
@@ -41,7 +43,9 @@ window.addEventListener("DOMContentLoaded", () => {
   const tiebreakerBtns = document.querySelectorAll(".tiebreaker-btn");
   tiebreakerBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
-      tiebreakerBtns.forEach((b) => b.classList.remove("tiebreaker-btn--selected"));
+      tiebreakerBtns.forEach((b) =>
+        b.classList.remove("tiebreaker-btn--selected"),
+      );
       btn.classList.add("tiebreaker-btn--selected");
       selectedTiebreaker = btn.dataset.tb;
     });
