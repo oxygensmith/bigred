@@ -1,3 +1,5 @@
+// bigred-index.js - v 1.1.01
+
 import "./styles/main.scss";
 import { Game } from "./bigred-game.js";
 
@@ -60,7 +62,7 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   const creditsModal = document.getElementById("credits-modal");
-  const creditsBtn   = document.getElementById("credits-btn");
+  const creditsBtn = document.getElementById("credits-btn");
   const creditsClose = document.getElementById("credits-close");
 
   creditsBtn.addEventListener("click", () => {

@@ -1,3 +1,5 @@
+// bigred-game.js - v 1.1.01
+
 import { AudioEngine } from "./bigred-audio.js";
 
 const CONFIG = {
@@ -260,7 +262,8 @@ export class Game {
 
     this.bigRedImage = new Image();
     this.bigRedImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(BIG_RED_SVG)}`;
-    this.bigRedImage.onload = () => this._rasterizeBigRed(CONFIG.LARGE_BALL_RADIUS);
+    this.bigRedImage.onload = () =>
+      this._rasterizeBigRed(CONFIG.LARGE_BALL_RADIUS);
 
     this.bigRedBitmap = null;
     this.bigRedBitmapRadius = -1;
@@ -456,7 +459,7 @@ export class Game {
           group.appendChild(track);
 
           ball._trackEl = track;
-          ball._fillEl  = fill;
+          ball._fillEl = fill;
           ball._checkEl = null;
         });
 
@@ -467,18 +470,19 @@ export class Game {
 
   buildDiagnosticsCache() {
     const rows = [
-      ["Seed",         "diag-seed"],
-      ["Segments",     "diag-segments"],
-      ["Big Red vx",   "diag-vx"],
-      ["Big Red vy",   "diag-vy"],
-      ["Speed scale",  "diag-speed"],
+      ["Seed", "diag-seed"],
+      ["Segments", "diag-segments"],
+      ["Big Red vx", "diag-vx"],
+      ["Big Red vy", "diag-vy"],
+      ["Speed scale", "diag-speed"],
       ["Time scale (+/-)", "diag-time"],
-      ["P (Big Red)",  "diag-p"],
-      ["O (all balls)","diag-o"],
+      ["P (Big Red)", "diag-p"],
+      ["O (all balls)", "diag-o"],
     ];
     this.ui.diagnostics.innerHTML = rows
-      .map(([label, id]) =>
-        `<div class="diagnostics__row"><span>${label}</span><span class="diagnostics__value" id="${id}"></span></div>`
+      .map(
+        ([label, id]) =>
+          `<div class="diagnostics__row"><span>${label}</span><span class="diagnostics__value" id="${id}"></span></div>`,
       )
       .join("");
     this.diagEls = {};
@@ -540,7 +544,10 @@ export class Game {
   }
 
   resize() {
-    const ratio = Math.min(window.devicePixelRatio || 1, this.isMobile ? 1.5 : Infinity);
+    const ratio = Math.min(
+      window.devicePixelRatio || 1,
+      this.isMobile ? 1.5 : Infinity,
+    );
     const width = this.canvas.clientWidth || 1200;
     const height = this.canvas.clientHeight || 640;
     this.canvas.width = width * ratio;
@@ -1105,7 +1112,7 @@ export class Game {
   updateScoreboard() {
     // Throttle: run health bars and diagnostics every 5 frames (~12fps), not 60fps
     const frame = ++this.scoreboardFrame;
-    const throttled = (frame % 5) !== 0;
+    const throttled = frame % 5 !== 0;
 
     // Timer and alive count update every frame (visible countdown)
     const aliveBalls = this.smallBalls.filter((ball) => ball.alive).length;
@@ -1123,20 +1130,23 @@ export class Game {
       this.terrainChunks,
     );
     const d = this.diagEls;
-    d["diag-seed"].textContent     = this.seed.toString(16).toUpperCase();
+    d["diag-seed"].textContent = this.seed.toString(16).toUpperCase();
     d["diag-segments"].textContent = `${segmentsSeen} / ${this.terrainChunks}`;
-    d["diag-vx"].textContent       = Math.round(this.largeBall.vx);
-    d["diag-vy"].textContent       = Math.round(this.largeBall.vy);
-    d["diag-speed"].textContent    = (this.largeBallSpeedScale * this.allBallsSpeedScale).toFixed(2);
-    d["diag-time"].textContent     = `${this.timeScale}×`;
-    d["diag-p"].textContent        = this.largeBallPaused ? "paused" : "running";
-    d["diag-o"].textContent        = this.allBallsPaused  ? "paused" : "running";
+    d["diag-vx"].textContent = Math.round(this.largeBall.vx);
+    d["diag-vy"].textContent = Math.round(this.largeBall.vy);
+    d["diag-speed"].textContent = (
+      this.largeBallSpeedScale * this.allBallsSpeedScale
+    ).toFixed(2);
+    d["diag-time"].textContent = `${this.timeScale}×`;
+    d["diag-p"].textContent = this.largeBallPaused ? "paused" : "running";
+    d["diag-o"].textContent = this.allBallsPaused ? "paused" : "running";
 
     // Health bars — refs live on each ball object, zero Map/querySelector lookups
-    const winnerName = this.gameOver === "ESCAPED" ? this.escapedTeam?.name : null;
+    const winnerName =
+      this.gameOver === "ESCAPED" ? this.escapedTeam?.name : null;
     this.smallBalls.forEach((ball) => {
       const track = ball._trackEl;
-      const fill  = ball._fillEl;
+      const fill = ball._fillEl;
       if (!track) return;
 
       if (!ball.alive) {
@@ -1232,18 +1242,24 @@ export class Game {
   drawTerrain(ctx) {
     const width = this.canvas.clientWidth;
     const allPoints = this.terrain.points;
-    const left  = this.cameraX - 60;
+    const left = this.cameraX - 60;
     const right = this.cameraX + width + 60;
 
     // Find index range covering the visible window, keeping one point outside
     // each edge so the path reaches the screen border cleanly.
     let startIdx = 0;
     for (let i = 1; i < allPoints.length; i++) {
-      if (allPoints[i].x >= left) { startIdx = Math.max(0, i - 1); break; }
+      if (allPoints[i].x >= left) {
+        startIdx = Math.max(0, i - 1);
+        break;
+      }
     }
     let endIdx = allPoints.length - 1;
     for (let i = startIdx; i < allPoints.length; i++) {
-      if (allPoints[i].x > right) { endIdx = Math.min(allPoints.length - 1, i + 1); break; }
+      if (allPoints[i].x > right) {
+        endIdx = Math.min(allPoints.length - 1, i + 1);
+        break;
+      }
     }
     const points = allPoints.slice(startIdx, endIdx + 1);
     if (points.length < 2) return;
@@ -1253,7 +1269,8 @@ export class Game {
     // Filled terrain body
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+    for (let i = 1; i < points.length; i++)
+      ctx.lineTo(points[i].x, points[i].y);
     ctx.lineTo(points[points.length - 1].x, CONFIG.SCENE_HEIGHT);
     ctx.lineTo(points[0].x, CONFIG.SCENE_HEIGHT);
     ctx.closePath();
@@ -1269,7 +1286,8 @@ export class Game {
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+    for (let i = 1; i < points.length; i++)
+      ctx.lineTo(points[i].x, points[i].y);
     ctx.stroke();
 
     ctx.restore();
@@ -1354,7 +1372,7 @@ export class Game {
   _rasterizeBigRed(radius) {
     const size = Math.ceil(radius * 2);
     const offscreen = document.createElement("canvas");
-    offscreen.width  = size;
+    offscreen.width = size;
     offscreen.height = size;
     offscreen.getContext("2d").drawImage(this.bigRedImage, 0, 0, size, size);
     this.bigRedBitmap = offscreen;
