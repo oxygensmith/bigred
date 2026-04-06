@@ -40,6 +40,17 @@ window.addEventListener("DOMContentLoaded", () => {
   let selectedTiebreaker = "health";
   let selectedSmoothness = 80;
 
+  // ── Start screen tabs ─────────────────────────────────────────────────────
+  const startTabs = document.querySelectorAll(".start-tab");
+  startTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      startTabs.forEach((t) => t.classList.remove("start-tab--active"));
+      tab.classList.add("start-tab--active");
+      document.querySelectorAll(".start-panel").forEach((p) => p.classList.remove("start-panel--active"));
+      document.getElementById(`panel-${tab.dataset.panel}`).classList.add("start-panel--active");
+    });
+  });
+
   const durationBtns = document.querySelectorAll(".duration-btn");
   durationBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
