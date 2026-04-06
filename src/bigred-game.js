@@ -554,11 +554,6 @@ export class Game {
     const isEscaped = this.gameOver === "ESCAPED";
     const color = isEscaped ? this.escapedTeam.color : "#e8493f";
 
-    this.ui.endHeadline.textContent = isEscaped ? "ESCAPED!!!" : "BIG RED WINS";
-    this.ui.endHeadline.style.color = color;
-    this.ui.endHeadline.style.textShadow = `0 0 32px ${color}`;
-    o.style.borderColor = color;
-
     if (isEscaped) {
       const t = this.escapedTeam;
       const s = t.through === 1 ? "survivor" : "survivors";
@@ -566,11 +561,17 @@ export class Game {
         this.tiebreaker === "health"
           ? `${t.totalHealth.toFixed(1)} total health`
           : `last through at ${formatTime(t.lastThrough)}`;
-      this.ui.endSubline.textContent = `Team ${t.name} — ${t.through} ${s} out · ${tiebreakerStr}`;
+      this.ui.endHeadline.textContent = `Team ${t.name} wins`;
+      this.ui.endSubline.textContent = `${t.through} ${s} escaped · ${tiebreakerStr}`;
       this.ui.endSubline.style.color = color;
     } else {
+      this.ui.endHeadline.textContent = "BIG RED WINS";
       this.ui.endSubline.textContent = "";
     }
+
+    this.ui.endHeadline.style.color = color;
+    this.ui.endHeadline.style.textShadow = `0 0 32px ${color}`;
+    o.style.borderColor = color;
 
     o.classList.remove("end-overlay--hidden");
 
