@@ -539,7 +539,7 @@ export class Game {
   }
 
   resize() {
-    const ratio = window.devicePixelRatio || 1;
+    const ratio = Math.min(window.devicePixelRatio || 1, this.isMobile ? 1.5 : Infinity);
     const width = this.canvas.clientWidth || 1200;
     const height = this.canvas.clientHeight || 640;
     this.canvas.width = width * ratio;

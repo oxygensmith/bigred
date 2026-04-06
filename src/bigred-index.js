@@ -59,5 +59,24 @@ window.addEventListener("DOMContentLoaded", () => {
     game.showStartScreen();
   });
 
+  const creditsModal = document.getElementById("credits-modal");
+  const creditsBtn   = document.getElementById("credits-btn");
+  const creditsClose = document.getElementById("credits-close");
+
+  creditsBtn.addEventListener("click", () => {
+    if (!game.paused && !game.gameOver) game.togglePause();
+    creditsModal.classList.remove("credits-modal--hidden");
+  });
+
+  const closeCredits = () => {
+    creditsModal.classList.add("credits-modal--hidden");
+    if (game.paused && !game.gameOver) game.togglePause();
+  };
+
+  creditsClose.addEventListener("click", closeCredits);
+  creditsModal.addEventListener("click", (e) => {
+    if (e.target === creditsModal) closeCredits();
+  });
+
   game.showStartScreen();
 });
