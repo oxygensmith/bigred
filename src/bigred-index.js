@@ -1,4 +1,4 @@
-// bigred-index.js - v 1.1.01
+// bigred-index.js - v 1.2.0
 
 import "./styles/main.scss";
 import { Game, VERSION } from "./bigred-game.js";
@@ -63,9 +63,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const landscapeBtns = document.querySelectorAll(".landscape-btn");
   landscapeBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
-      landscapeBtns.forEach((b) =>
-        b.classList.remove("landscape-btn--selected"),
-      );
+      landscapeBtns.forEach((b) => b.classList.remove("landscape-btn--selected"));
       btn.classList.add("landscape-btn--selected");
       selectedSmoothness = parseInt(btn.dataset.smoothness, 10);
     });
@@ -74,9 +72,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const tiebreakerBtns = document.querySelectorAll(".tiebreaker-btn");
   tiebreakerBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
-      tiebreakerBtns.forEach((b) =>
-        b.classList.remove("tiebreaker-btn--selected"),
-      );
+      tiebreakerBtns.forEach((b) => b.classList.remove("tiebreaker-btn--selected"));
       btn.classList.add("tiebreaker-btn--selected");
       selectedTiebreaker = btn.dataset.tb;
     });
@@ -105,9 +101,16 @@ window.addEventListener("DOMContentLoaded", () => {
   const btnSpeedDown    = document.getElementById("ctrl-speed-down");
   const btnSpeedUp      = document.getElementById("ctrl-speed-up");
   const speedDisplay    = document.getElementById("ctrl-speed-display");
+  const iconPause       = document.getElementById("icon-pause");
+  const iconPlay        = document.getElementById("icon-play");
 
   const syncControlButtons = () => {
-    btnPauseGame.classList.toggle("ctrl-btn--active", game.paused);
+    // Swap pause/play icon based on game state
+    const isPaused = game.paused;
+    iconPause.style.display = isPaused ? "none"  : "";
+    iconPlay.style.display  = isPaused ? ""      : "none";
+    btnPauseGame.classList.toggle("ctrl-btn--active", isPaused);
+
     btnPauseBigRed.classList.toggle("ctrl-btn--active", game.largeBallPaused);
     btnPauseMarbles.classList.toggle("ctrl-btn--active", game.allBallsPaused);
     speedDisplay.textContent = `${game.timeScale}×`;
@@ -162,16 +165,28 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ── Stats panel (S key toggle) ────────────────────────────────────────────
-  const statsPanel = document.getElementById("stats-panel");
+  // ── Stats panel (S key + button toggle) ──────────────────────────────────
+  const statsPanel  = document.getElementById("stats-panel");
+  const btnStats    = document.getElementById("ctrl-stats");
+
+  const syncStatsButton = () => {
+    btnStats.classList.toggle("ctrl-btn--active", !statsPanel.classList.contains("stats-panel--hidden"));
+  };
+
+  const toggleStats = () => {
+    statsPanel.classList.toggle("stats-panel--hidden");
+    syncStatsButton();
+  };
+
+  btnStats.addEventListener("click", toggleStats);
+
   document.addEventListener("keydown", (e) => {
-    if (e.code === "KeyS" && !e.metaKey && !e.ctrlKey) {
-      statsPanel.classList.toggle("stats-panel--hidden");
-    }
+    if (e.code === "KeyS" && !e.metaKey && !e.ctrlKey) toggleStats();
   });
 
+  // ── Credits ───────────────────────────────────────────────────────────────
   const creditsModal = document.getElementById("credits-modal");
-  const creditsBtn = document.getElementById("credits-btn");
+  const creditsBtn   = document.getElementById("credits-btn");
   const creditsClose = document.getElementById("credits-close");
 
   creditsBtn.addEventListener("click", () => {

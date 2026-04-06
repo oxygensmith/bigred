@@ -22,10 +22,49 @@
 
     <header class="top-bar">
       <div class="logo">Big Red</div>
-      <div class="game-controls">
+
+      <button class="ctrl-btn ctrl-btn--icon" id="ctrl-pause-game" title="Pause / Resume">
+        <!-- icon swapped by JS; default = playing → show pause bars -->
+        <svg id="icon-pause" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <rect x="5" y="4" width="4" height="16" rx="1"/>
+          <rect x="15" y="4" width="4" height="16" rx="1"/>
+        </svg>
+        <svg id="icon-play" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none">
+          <polygon points="5,3 19,12 5,21"/>
+        </svg>
+      </button>
+
+      <div class="status-panel">
+        <div id="timer">Time 05:00</div>
+        <div id="alive-summary">Alive 20 / 20</div>
+      </div>
+
+      <div class="top-bar__actions">
+        <button class="ctrl-btn ctrl-btn--icon" id="ctrl-restart" title="Restart">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74"/>
+            <polyline points="3 3 3 9 9 9"/>
+          </svg>
+        </button>
+        <button class="ctrl-btn ctrl-btn--icon" id="ctrl-stats" title="Stats (S)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <aside class="scoreboard">
+      <div id="health-grid" class="health-grid"></div>
+    </aside>
+
+    <div id="stats-panel" class="stats-panel stats-panel--hidden">
+      <div class="stats-controls">
         <div class="game-controls__group">
           <span class="game-controls__label">Pause</span>
-          <button class="ctrl-btn" id="ctrl-pause-game">Game</button>
           <button class="ctrl-btn" id="ctrl-pause-bigred">Big Red</button>
           <button class="ctrl-btn" id="ctrl-pause-marbles">Marbles</button>
         </div>
@@ -36,23 +75,6 @@
           <button class="ctrl-btn" id="ctrl-speed-up">+</button>
         </div>
       </div>
-      <div class="status-panel">
-        <div id="timer">Time 05:00</div>
-        <div id="alive-summary">Alive 20 / 20</div>
-      </div>
-      <button class="ctrl-btn ctrl-btn--icon" id="ctrl-restart" title="Restart">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74"/>
-          <polyline points="3 3 3 9 9 9"/>
-        </svg>
-      </button>
-    </header>
-
-    <aside class="scoreboard">
-      <div id="health-grid" class="health-grid"></div>
-    </aside>
-
-    <div id="stats-panel" class="stats-panel stats-panel--hidden">
       <div id="diagnostics" class="diagnostics"></div>
     </div>
 

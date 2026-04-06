@@ -1,8 +1,6 @@
-// bigred-game.js - v 1.1.01
-
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.1";
+export const VERSION = "1.2.2";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
