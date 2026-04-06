@@ -1,7 +1,7 @@
 // bigred-index.js - v 1.1.01
 
 import "./styles/main.scss";
-import { Game } from "./bigred-game.js";
+import { Game, VERSION } from "./bigred-game.js";
 
 // Prevent scroll/pinch on the document but leave buttons and inputs alone
 // passive: false is required so preventDefault() is honoured on iOS Safari
@@ -13,9 +13,14 @@ document.addEventListener("touchmove", (e) => {
 document.addEventListener("touchstart", (e) => {
   if (e.touches.length > 1) e.preventDefault(); // block pinch-zoom
 }, { passive: false });
-document.addEventListener("contextmenu", (e) => e.preventDefault());
+// Suppress context menu on touch devices only (right-click is useful on desktop)
+if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
+}
 
 window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("version-text").textContent = `Version ${VERSION}`;
+
   const canvas = document.getElementById("game-canvas");
   const ui = {
     timer: document.getElementById("timer"),
@@ -72,6 +77,11 @@ window.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("restart-btn").addEventListener("click", () => {
     game.showStartScreen();
+    syncControlButtons();
+  });
+
+  document.getElementById("ctrl-restart").addEventListener("click", () => {
+    game.terminate();
     syncControlButtons();
   });
 
@@ -138,6 +148,14 @@ window.addEventListener("DOMContentLoaded", () => {
         game.togglePause();
       }
       autoPaused = false;
+    }
+  });
+
+  // ── Stats panel (S key toggle) ────────────────────────────────────────────
+  const statsPanel = document.getElementById("stats-panel");
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "KeyS" && !e.metaKey && !e.ctrlKey) {
+      statsPanel.classList.toggle("stats-panel--hidden");
     }
   });
 

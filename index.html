@@ -17,109 +17,95 @@
     <link rel="stylesheet" href="./src/styles/main.scss" />
   </head>
   <body>
-    <div class="app-shell">
-      <main class="game-area">
-        <div class="game-column">
-          <header class="top-bar">
-            <div class="logo">Big Red</div>
-            <div class="game-controls">
-              <div class="game-controls__group">
-                <span class="game-controls__label">Pause</span>
-                <button class="ctrl-btn" id="ctrl-pause-game">Game</button>
-                <button class="ctrl-btn" id="ctrl-pause-bigred">Big Red</button>
-                <button class="ctrl-btn" id="ctrl-pause-marbles">
-                  Marbles
-                </button>
-              </div>
-              <div class="game-controls__group">
-                <span class="game-controls__label">Speed</span>
-                <button class="ctrl-btn" id="ctrl-speed-down">−</button>
-                <span id="ctrl-speed-display" class="game-controls__speed"
-                  >1×</span
-                >
-                <button class="ctrl-btn" id="ctrl-speed-up">+</button>
-              </div>
-            </div>
-            <div class="status-panel">
-              <div id="timer">Time 05:00</div>
-              <div id="alive-summary">Alive 20 / 20</div>
-            </div>
-          </header>
-          <div class="canvas-wrap">
-            <canvas id="game-canvas" width="1200" height="640"></canvas>
-            <div id="start-overlay" class="start-overlay">
-              <p class="start-overlay__title">Big Red</p>
-              <div class="start-overlay__section">
-                <p class="start-overlay__label">Length of game</p>
-                <div class="duration-picker">
-                  <button class="duration-btn" data-ms="120000">2 min</button>
-                  <button class="duration-btn" data-ms="180000">3 min</button>
-                  <button
-                    class="duration-btn duration-btn--selected"
-                    data-ms="300000"
-                  >
-                    5 min
-                  </button>
-                  <button class="duration-btn" data-ms="600000">10 min</button>
-                  <button class="duration-btn" data-ms="1200000">20 min</button>
-                </div>
-              </div>
-              <div class="start-overlay__section">
-                <p class="start-overlay__label">Landscape</p>
-                <div class="duration-picker">
-                  <button class="landscape-btn" data-smoothness="36">
-                    Rocky
-                  </button>
-                  <button
-                    class="landscape-btn landscape-btn--selected"
-                    data-smoothness="80"
-                  >
-                    Average
-                  </button>
-                  <button class="landscape-btn" data-smoothness="180">
-                    Gentle
-                  </button>
-                </div>
-              </div>
-              <div class="start-overlay__section">
-                <p class="start-overlay__label">
-                  Most survivors = winning team.<br />Choose the tiebreaker:
-                </p>
-                <div class="duration-picker tiebreaker-picker">
-                  <button
-                    class="tiebreaker-btn tiebreaker-btn--selected"
-                    data-tb="health"
-                  >
-                    Highest Team total health
-                  </button>
-                  <button class="tiebreaker-btn" data-tb="speed">
-                    Fastest Team through gate
-                  </button>
-                </div>
-              </div>
-              <button id="start-btn" class="start-btn">Start</button>
-            </div>
-            <div id="pause-overlay" class="pause-overlay pause-overlay--hidden">
-              <p class="pause-overlay__text">Paused</p>
-              <p class="pause-overlay__hint">Press Space to resume</p>
-            </div>
-            <div id="end-overlay" class="end-overlay end-overlay--hidden">
-              <p id="end-headline" class="end-overlay__headline"></p>
-              <p id="end-subline" class="end-overlay__subline"></p>
-              <button id="restart-btn" class="restart-btn">Play Again</button>
-              <p class="end-overlay__prompt">or press Space</p>
-            </div>
-          </div>
+
+    <canvas id="game-canvas"></canvas>
+
+    <header class="top-bar">
+      <div class="logo">Big Red</div>
+      <div class="game-controls">
+        <div class="game-controls__group">
+          <span class="game-controls__label">Pause</span>
+          <button class="ctrl-btn" id="ctrl-pause-game">Game</button>
+          <button class="ctrl-btn" id="ctrl-pause-bigred">Big Red</button>
+          <button class="ctrl-btn" id="ctrl-pause-marbles">Marbles</button>
         </div>
-        <aside class="scoreboard">
-          <div id="health-grid" class="health-grid"></div>
-          <div id="diagnostics" class="diagnostics"></div>
-        </aside>
-      </main>
+        <div class="game-controls__group">
+          <span class="game-controls__label">Speed</span>
+          <button class="ctrl-btn" id="ctrl-speed-down">−</button>
+          <span id="ctrl-speed-display" class="game-controls__speed">1×</span>
+          <button class="ctrl-btn" id="ctrl-speed-up">+</button>
+        </div>
+      </div>
+      <div class="status-panel">
+        <div id="timer">Time 05:00</div>
+        <div id="alive-summary">Alive 20 / 20</div>
+      </div>
+      <button class="ctrl-btn ctrl-btn--icon" id="ctrl-restart" title="Restart">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74"/>
+          <polyline points="3 3 3 9 9 9"/>
+        </svg>
+      </button>
+    </header>
+
+    <aside class="scoreboard">
+      <div id="health-grid" class="health-grid"></div>
+    </aside>
+
+    <div id="stats-panel" class="stats-panel stats-panel--hidden">
+      <div id="diagnostics" class="diagnostics"></div>
+    </div>
+
+    <div id="start-overlay" class="start-overlay">
+      <p class="start-overlay__title">Big Red</p>
+      <div class="start-overlay__section">
+        <p class="start-overlay__label">Length of game</p>
+        <div class="duration-picker">
+          <button class="duration-btn" data-ms="120000">2 min</button>
+          <button class="duration-btn" data-ms="180000">3 min</button>
+          <button class="duration-btn duration-btn--selected" data-ms="300000">5 min</button>
+          <button class="duration-btn" data-ms="600000">10 min</button>
+          <button class="duration-btn" data-ms="1200000">20 min</button>
+        </div>
+      </div>
+      <div class="start-overlay__section">
+        <p class="start-overlay__label">Landscape</p>
+        <div class="duration-picker">
+          <button class="landscape-btn" data-smoothness="36">Rocky</button>
+          <button class="landscape-btn landscape-btn--selected" data-smoothness="80">Average</button>
+          <button class="landscape-btn" data-smoothness="180">Gentle</button>
+        </div>
+      </div>
+      <div class="start-overlay__section">
+        <p class="start-overlay__label">
+          Most survivors = winning team.<br />Choose the tiebreaker:
+        </p>
+        <div class="duration-picker tiebreaker-picker">
+          <button class="tiebreaker-btn tiebreaker-btn--selected" data-tb="health">
+            Highest Team total health
+          </button>
+          <button class="tiebreaker-btn" data-tb="speed">
+            Fastest Team through gate
+          </button>
+        </div>
+      </div>
+      <button id="start-btn" class="start-btn">Start</button>
+    </div>
+
+    <div id="pause-overlay" class="pause-overlay pause-overlay--hidden">
+      <p class="pause-overlay__text">Paused</p>
+      <p class="pause-overlay__hint">Press Space to resume</p>
+    </div>
+
+    <div id="end-overlay" class="end-overlay end-overlay--hidden">
+      <p id="end-headline" class="end-overlay__headline"></p>
+      <p id="end-subline" class="end-overlay__subline"></p>
+      <button id="restart-btn" class="restart-btn">Play Again</button>
+      <p class="end-overlay__prompt">or press Space</p>
     </div>
 
     <p class="version-line">
-      Version 1.1.3 &nbsp;·&nbsp;
+      <span id="version-text"></span> &nbsp;·&nbsp;
       <button class="credits-btn" id="credits-btn">Credits</button>
     </p>
 

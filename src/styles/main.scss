@@ -4,16 +4,6 @@
 @use "game";
 
 body {
-  min-height: 100vh;
   text-transform: uppercase;
   background-color: var(--bg);
-}
-
-#game-canvas {
-  border-radius: 28px;
-  box-shadow: 0 28px 100px rgba(17, 20, 32, 0.45);
-  background:
-    radial-gradient(circle at top, rgba(74, 111, 255, 0.12), transparent 35%),
-    linear-gradient(180deg, rgba(14, 21, 39, 0.95), rgba(10, 12, 23, 0.98));
-  min-height: 640px;
 }

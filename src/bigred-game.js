@@ -2,6 +2,8 @@
 
 import { AudioEngine } from "./bigred-audio.js";
 
+export const VERSION = "1.2.0";
+
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
   // SCENE_WIDTH is not fixed — calculated at game start as terrainChunks × LANDSCAPE_SMOOTHNESS
@@ -273,6 +275,7 @@ export class Game {
     this.gameDurationMs = CONFIG.GAME_DURATION_MS;
     this.tiebreaker = "health";
     this.loopRunning = false;
+    this._rafId = null;
 
     window.addEventListener("keydown", (event) => {
       if (event.code === "Space") {
@@ -503,6 +506,19 @@ export class Game {
     this.ui.startOverlay.classList.remove("start-overlay--hidden");
   }
 
+  /* Hard stop — cancels the rAF loop and resets audio. Use for the top-bar
+     restart button so we return to a completely clean pre-game state. */
+  terminate() {
+    if (this._rafId !== null) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
+    this.loopRunning = false;
+    this.audio.reset();
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.showStartScreen();
+  }
+
   begin(durationMs, tiebreaker, landscapeSmoothness) {
     this.audio.reset();
     this.audio.init(CONFIG.USE_SAMPLED_AUDIO);
@@ -519,7 +535,10 @@ export class Game {
 
   togglePause() {
     this.paused = !this.paused;
-    this.ui.pauseOverlay.classList.toggle("pause-overlay--hidden", !this.paused);
+    this.ui.pauseOverlay.classList.toggle(
+      "pause-overlay--hidden",
+      !this.paused,
+    );
   }
 
   showEndOverlay() {
@@ -573,7 +592,7 @@ export class Game {
     }
 
     this.draw();
-    requestAnimationFrame((nextStamp) => this.frame(nextStamp));
+    this._rafId = requestAnimationFrame((nextStamp) => this.frame(nextStamp));
   }
 
   update(dt) {
@@ -1217,7 +1236,6 @@ export class Game {
     this.drawBalls(ctx);
     this.drawParticles(ctx);
     ctx.restore();
-
   }
 
   drawParticles(ctx) {

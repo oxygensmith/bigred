@@ -23,9 +23,11 @@ a {
 }
 
 #game-canvas {
-  display: block;
+  position: fixed;
+  inset: 0;
   width: 100%;
   height: 100%;
+  display: block;
   touch-action: none; /* block scroll/zoom on the canvas only */
 }
 
