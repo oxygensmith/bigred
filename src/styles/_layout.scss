@@ -492,8 +492,43 @@
 
 .leaderboard-overlay__table-wrap {
   width: 100%;
-  max-height: 55vh;
+  max-height: min(260px, 45vh);
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.leaderboard-podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 4px 0 0;
+}
+
+.podium-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.podium-marble {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.podium-column {
+  width: 32px;
+  border-radius: 2px 2px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.65);
 }
 
 .leaderboard-table {

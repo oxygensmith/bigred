@@ -34,6 +34,7 @@ window.addEventListener("DOMContentLoaded", () => {
     pauseOverlay: document.getElementById("pause-overlay"),
     leaderboardOverlay: document.getElementById("leaderboard-overlay"),
     leaderboardBody: document.getElementById("leaderboard-body"),
+    leaderboardPodium: document.getElementById("leaderboard-podium"),
   };
 
   const game = new Game(canvas, ui);
@@ -86,6 +87,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("resume-btn").addEventListener("click", () => {
     game.togglePause();
+  });
+
+  document.getElementById("close-leaderboard-btn").addEventListener("click", () => {
+    game.hideLeaderboard();
   });
 
   document.getElementById("restart-btn").addEventListener("click", () => {

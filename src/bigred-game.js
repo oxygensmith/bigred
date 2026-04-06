@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.7";
+export const VERSION = "1.2.8";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -258,6 +258,8 @@ export class Game {
     this.ctx = canvas.getContext("2d");
     this.ui = ui;
     this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    this.viewW = window.innerWidth || 1200;
+    this.viewH = window.innerHeight || 640;
     this.paused = false;
     this.timeScale = 1;
     this.lastTimestamp = 0;
@@ -639,6 +641,28 @@ export class Game {
     const stored = localStorage.getItem("bigred_results") ?? "";
     const rows = stored ? stored.trim().split("\n").reverse() : [];
 
+    // ── Podium ──
+    const winMap = {};
+    rows.forEach((row) => {
+      const [, winner, , , , color] = row.split(", ");
+      const c = color ?? (winner === "Big Red" ? "#e8493f" : "#ffffff");
+      if (!winMap[winner]) winMap[winner] = { count: 0, color: c };
+      winMap[winner].count++;
+    });
+    const podiumEntries = Object.entries(winMap)
+      .map(([, v]) => v)
+      .sort((a, b) => b.count - a.count);
+    this.ui.leaderboardPodium.innerHTML = podiumEntries
+      .map(({ color, count }, rank) => {
+        const height = 15 + (19 - 2 * rank);
+        return `<div class="podium-entry">
+          <div class="podium-marble" style="background:${color}"></div>
+          <div class="podium-column" style="height:${height}px;background:${color}">${count}</div>
+        </div>`;
+      })
+      .join("");
+
+    // ── Table ──
     if (rows.length === 0) {
       this.ui.leaderboardBody.innerHTML = `<tr><td colspan="5" class="leaderboard-table__empty">No results yet</td></tr>`;
     } else {
@@ -674,10 +698,14 @@ export class Game {
       window.devicePixelRatio || 1,
       this.isMobile ? 1.5 : Infinity,
     );
-    const width = this.canvas.clientWidth || 1200;
-    const height = this.canvas.clientHeight || 640;
-    this.canvas.width = width * ratio;
-    this.canvas.height = height * ratio;
+    // Use window.inner* instead of canvas.clientWidth to avoid a Safari bug
+    // where setting canvas.width causes clientWidth to reflect the attribute
+    // size rather than the CSS layout size, creating a compounding loop across
+    // game restarts that shrinks the drawing buffer and magnifies the scene.
+    this.viewW = window.innerWidth || 1200;
+    this.viewH = window.innerHeight || 640;
+    this.canvas.width = this.viewW * ratio;
+    this.canvas.height = this.viewH * ratio;
     this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   }
 
@@ -706,7 +734,7 @@ export class Game {
 
       if (!this.finishActive && this.elapsedMs >= this.gameDurationMs) {
         this.finishActive = true;
-        this.finishLineX = this.cameraX + this.canvas.clientWidth;
+        this.finishLineX = this.cameraX + this.viewW;
         // Flatten all terrain points beyond the finish line
         const flatY = this.terrain.getY(this.finishLineX);
         this.terrain.points.forEach((p) => {
@@ -852,7 +880,7 @@ export class Game {
     if (
       ball.type === "large" &&
       this.gameOver === "BIG_RED_WINS" &&
-      ball.x - ball.radius > this.cameraX + this.canvas.clientWidth + 400
+      ball.x - ball.radius > this.cameraX + this.viewW + 400
     )
       return;
     if (ball.type === "small" && ball.finished) {
@@ -892,7 +920,7 @@ export class Game {
         ball.vx = Math.abs(ball.vx) * 0.4;
       }
       // Invisible right wall: half canvas-width beyond the gate
-      const rightWall = this.finishLineX + this.canvas.clientWidth / 2;
+      const rightWall = this.finishLineX + this.viewW / 2;
       if (ball.x + ball.radius >= rightWall) {
         ball.x = rightWall - ball.radius - 1;
         ball.vx = -Math.abs(ball.vx) * ball.bounciness;
@@ -1291,19 +1319,15 @@ export class Game {
     let targetX;
     if (this.finishActive) {
       // Drift so the gate sits at the horizontal centre of the canvas
-      const gateCentreTarget = this.finishLineX - this.canvas.clientWidth / 2;
-      targetX = clamp(
-        gateCentreTarget,
-        0,
-        this.sceneWidth - this.canvas.clientWidth,
-      );
+      const gateCentreTarget = this.finishLineX - this.viewW / 2;
+      targetX = clamp(gateCentreTarget, 0, this.sceneWidth - this.viewW);
       // Stop scrolling once the gate is already centred
       if (Math.abs(this.cameraX - targetX) < 1) return;
     } else {
       targetX = clamp(
         this.largeBall.x - CONFIG.CAMERA_OFFSET_X,
         0,
-        this.sceneWidth - this.canvas.clientWidth,
+        this.sceneWidth - this.viewW,
       );
     }
     this.cameraX = lerp(this.cameraX, targetX, CONFIG.CAMERA_LERP);
@@ -1326,7 +1350,7 @@ export class Game {
     // Diagnostics — textContent on cached spans, no innerHTML rebuild
     const chunkWidth = this.sceneWidth / this.terrainChunks;
     const segmentsSeen = Math.min(
-      Math.floor((this.cameraX + this.canvas.clientWidth) / chunkWidth),
+      Math.floor((this.cameraX + this.viewW) / chunkWidth),
       this.terrainChunks,
     );
     const d = this.diagEls;
@@ -1386,8 +1410,8 @@ export class Game {
 
   draw() {
     const ctx = this.ctx;
-    const width = this.canvas.clientWidth;
-    const height = this.canvas.clientHeight;
+    const width = this.viewW;
+    const height = this.viewH;
     ctx.clearRect(0, 0, width, height);
 
     ctx.fillStyle = "#131523";
@@ -1478,7 +1502,7 @@ export class Game {
   }
 
   drawTerrain(ctx) {
-    const width = this.canvas.clientWidth;
+    const width = this.viewW;
     const allPoints = this.terrain.points;
     const left = this.cameraX - 60;
     const right = this.cameraX + width + 60;
