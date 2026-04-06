@@ -3,6 +3,18 @@
 import "./styles/main.scss";
 import { Game } from "./bigred-game.js";
 
+// Prevent scroll/pinch on the document but leave buttons and inputs alone
+// passive: false is required so preventDefault() is honoured on iOS Safari
+document.addEventListener("touchmove", (e) => {
+  if (!e.target.closest("button, a, input, select, textarea")) {
+    e.preventDefault();
+  }
+}, { passive: false });
+document.addEventListener("touchstart", (e) => {
+  if (e.touches.length > 1) e.preventDefault(); // block pinch-zoom
+}, { passive: false });
+document.addEventListener("contextmenu", (e) => e.preventDefault());
+
 window.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("game-canvas");
   const ui = {
