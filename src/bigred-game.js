@@ -111,11 +111,11 @@ so balls will still differ from each other. */
   USE_SAMPLED_AUDIO: 0, // 0 = synthesized fallback sounds only; 1 = load base64 samples from sounds.js
 
   // ─── Health pickups ───────────────────────────────────────────────────────
-  HEALTH_PICKUP_INTERVAL_MS: 10000, // One pickup spawns every this many ms of game time
+  HEALTH_PICKUP_INTERVAL_MS: 5000, // One pickup spawns every this many ms of game time
   HEALTH_PICKUP_RADIUS: 30, // Visual radius of the icon (px) — 60px diameter
   HEALTH_PICKUP_HEAL: 0.5, // Fraction of missing health restored on collection
   HEALTH_PICKUP_LOOKAHEAD: 2000, // How far ahead of current camera to place the pickup (px)
-  HEALTH_PICKUP_MIN_CLEARANCE: 80, // Minimum px above the terrain surface
+  HEALTH_PICKUP_MIN_CLEARANCE: 40, // Minimum px above the terrain surface
 
   // ─── Terrain generation ───────────────────────────────────────────────────
   TERRAIN_CHUNKS: 750, // Not used at runtime — chunk count is auto-calculated as 10 segments/sec of game duration
