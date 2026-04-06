@@ -23,14 +23,28 @@ export class AudioEngine {
   constructor() {
     this.ac = null;
     this.wailBuffer = null;
-    this.winBuffer = null;
+    this.winBuffer  = null;
     this.loseBuffer = null;
+    this._activeVoices = 0;
+    this._lastImpactTime = 0;
+  }
+
+  // Close the old context and release all scheduled nodes (call before each new game)
+  reset() {
+    if (this.ac) {
+      this.ac.close();
+      this.ac = null;
+      this.wailBuffer = null;
+      this.winBuffer  = null;
+      this.loseBuffer = null;
+      this._activeVoices = 0;
+      this._lastImpactTime = 0;
+    }
   }
 
   // Call once from a user-gesture handler (Start button) to unlock AudioContext.
   // Pass useSampled=1 to load base64 samples from bigred-sounds.js; 0 for synth-only.
   init(useSampled = 1) {
-    if (this.ac) return;
     this.ac = new (window.AudioContext || window.webkitAudioContext)();
     if (useSampled) this._loadSamples();
   }
@@ -62,6 +76,17 @@ export class AudioEngine {
     } else {
       fn();
     }
+  }
+
+  // Voice-limited wrapper: drop the sound if too many voices are active
+  _tryPlay(fn, durationMs = 500) {
+    if (!this.ac) return;
+    if (this._activeVoices >= 6) return;
+    this._activeVoices++;
+    this._resume(() => {
+      fn();
+      setTimeout(() => { this._activeVoices = Math.max(0, this._activeVoices - 1); }, durationMs);
+    });
   }
 
   _playSample(buffer, gain, fallback) {
@@ -103,7 +128,10 @@ export class AudioEngine {
   // Big Red hits the ground — low rumble, intensity 0..1
   playGroundImpact(intensity) {
     if (!this.ac) return;
-    this._resume(() => {
+    const now = this.ac.currentTime;
+    if (now - this._lastImpactTime < 0.08) return;
+    this._lastImpactTime = now;
+    this._tryPlay(() => {
       const ac = this.ac;
       const now = ac.currentTime;
       const dur = 0.45;
@@ -135,13 +163,13 @@ export class AudioEngine {
       osc.start(now);
       noise.stop(now + dur);
       osc.stop(now + dur);
-    });
+    }, 450);
   }
 
   // Small ball struck — short tearing noise burst
   playBallStruck() {
     if (!this.ac) return;
-    this._resume(() => {
+    this._tryPlay(() => {
       const ac = this.ac;
       const now = ac.currentTime;
       const dur = 0.13;
@@ -165,7 +193,7 @@ export class AudioEngine {
 
       noise.start(now);
       noise.stop(now + dur);
-    });
+    }, 130);
   }
 
   // Small ball eliminated — sampled wail if loaded, synthesized fallback otherwise

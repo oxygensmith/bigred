@@ -493,6 +493,7 @@ export class Game {
   }
 
   begin(durationMs, tiebreaker, landscapeSmoothness) {
+    this.audio.reset();
     this.audio.init(CONFIG.USE_SAMPLED_AUDIO);
     this.gameDurationMs = durationMs;
     this.tiebreaker = tiebreaker;
