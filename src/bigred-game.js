@@ -260,6 +260,10 @@ export class Game {
 
     this.bigRedImage = new Image();
     this.bigRedImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(BIG_RED_SVG)}`;
+    this.bigRedImage.onload = () => this._rasterizeBigRed(CONFIG.LARGE_BALL_RADIUS);
+
+    this.bigRedBitmap = null;
+    this.bigRedBitmapRadius = -1;
 
     this.resize();
     window.addEventListener("resize", () => this.resize());
@@ -410,6 +414,7 @@ export class Game {
     this.allBallsSpeedScale = 1;
     this.gameOver = null;
     this.escapedTeam = null;
+    this.scoreboardFrame = 0;
     this.ui.endOverlay.classList.add("end-overlay--hidden");
     this.finishLineX = 0;
     this.finishGateAge = 0;
@@ -417,7 +422,69 @@ export class Game {
     this.elapsedMs = 0;
     this.finishActive = false;
     this.cameraX = 0;
+    this.buildHealthGrid();
+    this.buildDiagnosticsCache();
     this.updateScoreboard();
+  }
+
+  buildHealthGrid() {
+    this.ui.healthGrid.innerHTML = "";
+    this.teamGroupEls = new Map();
+
+    const teamOrder = [...new Set(BALL_ROSTER.map((b) => b.team))];
+    teamOrder.forEach((team) => {
+      const group = document.createElement("div");
+      group.className = "team-group";
+      group.dataset.team = team;
+
+      const label = document.createElement("div");
+      label.className = "team-label";
+      label.textContent = team;
+      group.appendChild(label);
+
+      this.smallBalls
+        .filter((b) => b.team === team)
+        .forEach((ball) => {
+          const track = document.createElement("div");
+          track.className = "team-track";
+          track.title = ball.name;
+
+          const fill = document.createElement("div");
+          fill.className = "team-bar-fill";
+          fill.style.backgroundColor = ball.color;
+          track.appendChild(fill);
+          group.appendChild(track);
+
+          ball._trackEl = track;
+          ball._fillEl  = fill;
+          ball._checkEl = null;
+        });
+
+      this.ui.healthGrid.appendChild(group);
+      this.teamGroupEls.set(team, group);
+    });
+  }
+
+  buildDiagnosticsCache() {
+    const rows = [
+      ["Seed",         "diag-seed"],
+      ["Segments",     "diag-segments"],
+      ["Big Red vx",   "diag-vx"],
+      ["Big Red vy",   "diag-vy"],
+      ["Speed scale",  "diag-speed"],
+      ["Time scale (+/-)", "diag-time"],
+      ["P (Big Red)",  "diag-p"],
+      ["O (all balls)","diag-o"],
+    ];
+    this.ui.diagnostics.innerHTML = rows
+      .map(([label, id]) =>
+        `<div class="diagnostics__row"><span>${label}</span><span class="diagnostics__value" id="${id}"></span></div>`
+      )
+      .join("");
+    this.diagEls = {};
+    rows.forEach(([, id]) => {
+      this.diagEls[id] = document.getElementById(id);
+    });
   }
 
   showStartScreen() {
@@ -1035,100 +1102,72 @@ export class Game {
   }
 
   updateScoreboard() {
-    const aliveBalls = this.smallBalls.filter((ball) => ball.alive).length;
+    // Throttle: run health bars and diagnostics every 5 frames (~12fps), not 60fps
+    const frame = ++this.scoreboardFrame;
+    const throttled = (frame % 5) !== 0;
 
+    // Timer and alive count update every frame (visible countdown)
+    const aliveBalls = this.smallBalls.filter((ball) => ball.alive).length;
     this.ui.timer.innerText = this.finishActive
       ? "FINISH GATE OPEN"
       : `Time ${formatTime(this.gameDurationMs - this.elapsedMs)}`;
     this.ui.aliveSummary.innerText = `Alive ${aliveBalls} / ${CONFIG.BALL_COUNT}`;
 
+    if (throttled) return;
+
+    // Diagnostics — textContent on cached spans, no innerHTML rebuild
     const chunkWidth = this.sceneWidth / this.terrainChunks;
     const segmentsSeen = Math.min(
       Math.floor((this.cameraX + this.canvas.clientWidth) / chunkWidth),
       this.terrainChunks,
     );
-    this.ui.diagnostics.innerHTML = `
-      <div class="diagnostics__row"><span>Seed</span><span class="diagnostics__value">${this.seed.toString(16).toUpperCase()}</span></div>
-      <div class="diagnostics__row"><span>Segments</span><span class="diagnostics__value">${segmentsSeen} / ${this.terrainChunks}</span></div>
-      <div class="diagnostics__row"><span>Big Red vx</span><span class="diagnostics__value">${Math.round(this.largeBall.vx)}</span></div>
-      <div class="diagnostics__row"><span>Big Red vy</span><span class="diagnostics__value">${Math.round(this.largeBall.vy)}</span></div>
-      <div class="diagnostics__row"><span>Speed scale</span><span class="diagnostics__value">${(this.largeBallSpeedScale * this.allBallsSpeedScale).toFixed(2)}</span></div>
-      <div class="diagnostics__row"><span>Time scale (+/-)</span><span class="diagnostics__value">${this.timeScale}×</span></div>
-      <div class="diagnostics__row"><span>P (Big Red)</span><span class="diagnostics__value">${this.largeBallPaused ? "paused" : "running"}</span></div>
-      <div class="diagnostics__row"><span>O (all balls)</span><span class="diagnostics__value">${this.allBallsPaused ? "paused" : "running"}</span></div>
-    `;
+    const d = this.diagEls;
+    d["diag-seed"].textContent     = this.seed.toString(16).toUpperCase();
+    d["diag-segments"].textContent = `${segmentsSeen} / ${this.terrainChunks}`;
+    d["diag-vx"].textContent       = Math.round(this.largeBall.vx);
+    d["diag-vy"].textContent       = Math.round(this.largeBall.vy);
+    d["diag-speed"].textContent    = (this.largeBallSpeedScale * this.allBallsSpeedScale).toFixed(2);
+    d["diag-time"].textContent     = `${this.timeScale}×`;
+    d["diag-p"].textContent        = this.largeBallPaused ? "paused" : "running";
+    d["diag-o"].textContent        = this.allBallsPaused  ? "paused" : "running";
 
-    // Build team groups once per game
-    if (!this.ui.healthGrid.querySelector(".team-group")) {
-      this.ui.healthGrid.innerHTML = "";
-      const teamOrder = [...new Set(BALL_ROSTER.map((b) => b.team))];
-      teamOrder.forEach((team) => {
-        const group = document.createElement("div");
-        group.className = "team-group";
-        group.dataset.team = team;
-
-        const label = document.createElement("div");
-        label.className = "team-label";
-        label.textContent = team;
-        group.appendChild(label);
-
-        this.smallBalls
-          .filter((b) => b.team === team)
-          .forEach((ball) => {
-            const track = document.createElement("div");
-            track.className = "team-track";
-            track.dataset.id = String(ball.id);
-            track.title = ball.name;
-            const fill = document.createElement("div");
-            fill.className = "team-bar-fill";
-            fill.style.backgroundColor = ball.color;
-            track.appendChild(fill);
-            group.appendChild(track);
-          });
-
-        this.ui.healthGrid.appendChild(group);
-      });
-    }
-
-    // Update bars each frame
+    // Health bars — refs live on each ball object, zero Map/querySelector lookups
+    const winnerName = this.gameOver === "ESCAPED" ? this.escapedTeam?.name : null;
     this.smallBalls.forEach((ball) => {
-      const track = this.ui.healthGrid.querySelector(
-        `.team-track[data-id="${ball.id}"]`,
-      );
+      const track = ball._trackEl;
+      const fill  = ball._fillEl;
       if (!track) return;
-      const fill = track.querySelector(".team-bar-fill");
-      if (!fill) return;
+
       if (!ball.alive) {
         fill.style.width = "0%";
         track.classList.add("team-track--dead");
         track.classList.remove("team-track--finished");
       } else if (ball.finished) {
-        // Keep health bar at whatever level it was; just add the checkmark class
         fill.style.width = `${clamp(ball.health / CONFIG.SMALL_BALL_HEALTH, 0, 1) * 100}%`;
         track.classList.add("team-track--finished");
         track.classList.remove("team-track--dead");
-        if (!track.querySelector(".team-check")) {
+        if (!ball._checkEl) {
           const check = document.createElement("span");
           check.className = "team-check";
           check.textContent = "✓";
           check.style.color = ball.color;
           track.appendChild(check);
+          ball._checkEl = check;
         }
       } else {
         fill.style.width = `${clamp(ball.health / CONFIG.SMALL_BALL_HEALTH, 0, 1) * 100}%`;
         track.classList.remove("team-track--dead", "team-track--finished");
-        const staleCheck = track.querySelector(".team-check");
-        if (staleCheck) staleCheck.remove();
+        if (ball._checkEl) {
+          ball._checkEl.remove();
+          ball._checkEl = null;
+        }
       }
     });
 
-    // Dim team label when every ball on that team is dead; highlight the winner
-    const winnerName =
-      this.gameOver === "ESCAPED" ? this.escapedTeam?.name : null;
-    this.ui.healthGrid.querySelectorAll(".team-group").forEach((group) => {
-      const team = group.dataset.team;
-      const teamBalls = this.smallBalls.filter((b) => b.team === team);
-      const allDead = teamBalls.length > 0 && teamBalls.every((b) => !b.alive);
+    // Team eliminated / winner state — one pass over cached group elements
+    this.teamGroupEls.forEach((group, team) => {
+      const balls = this.smallBalls.filter((b) => b.team === team);
+      const allDead = balls.length > 0 && balls.every((b) => !b.alive);
       group.classList.toggle("team-group--eliminated", allDead);
       group.classList.toggle("team-group--winner", team === winnerName);
     });
@@ -1311,19 +1350,33 @@ export class Game {
     ctx.restore();
   }
 
+  _rasterizeBigRed(radius) {
+    const size = Math.ceil(radius * 2);
+    const offscreen = document.createElement("canvas");
+    offscreen.width  = size;
+    offscreen.height = size;
+    offscreen.getContext("2d").drawImage(this.bigRedImage, 0, 0, size, size);
+    this.bigRedBitmap = offscreen;
+    this.bigRedBitmapRadius = radius;
+  }
+
   drawBalls(ctx) {
     const drawBall = (ball) => {
       if (ball.type === "small" && !ball.alive) return;
       ctx.save();
 
       if (ball.type === "large") {
-        // Draw Big Red as a rotating SVG
+        // Re-rasterize only when radius has changed (e.g. after a kill)
+        if (this.bigRedBitmap && ball.radius !== this.bigRedBitmapRadius) {
+          this._rasterizeBigRed(ball.radius);
+        }
         const size = ball.radius * 2;
         ctx.translate(ball.x, ball.y);
         ctx.rotate(ball.angle);
         ctx.shadowColor = "rgba(232, 73, 63, 0.5)";
         ctx.shadowBlur = this.isMobile ? 0 : 28;
-        ctx.drawImage(this.bigRedImage, -size / 2, -size / 2, size, size);
+        const src = this.bigRedBitmap || this.bigRedImage;
+        ctx.drawImage(src, -size / 2, -size / 2, size, size);
       } else {
         // Small balls: filled circle
         ctx.beginPath();
