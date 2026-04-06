@@ -566,7 +566,7 @@ export class Game {
         this.tiebreaker === "health"
           ? `${t.totalHealth.toFixed(1)} total health`
           : `last through at ${formatTime(t.lastThrough)}`;
-      this.ui.endSubline.textContent = `${t.name} team — ${t.through} ${s} through · ${tiebreakerStr}`;
+      this.ui.endSubline.textContent = `Team ${t.name} — ${t.through} ${s} out · ${tiebreakerStr}`;
       this.ui.endSubline.style.color = color;
     } else {
       this.ui.endSubline.textContent = "";
