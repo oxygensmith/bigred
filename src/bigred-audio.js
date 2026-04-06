@@ -29,6 +29,10 @@ export class AudioEngine {
     this.loseBuffer = null;
     this._activeVoices = 0;
     this._lastImpactTime = 0;
+    // Stored b64 strings so we can re-decode after a periodic flush
+    this._wailB64 = null;
+    this._winB64 = null;
+    this._loseB64 = null;
   }
 
   /* Close the old context and release all scheduled nodes (call before each new game) */
@@ -44,6 +48,24 @@ export class AudioEngine {
     }
   }
 
+  /* Periodic hard flush: close the AudioContext and open a fresh one.
+     Clears any stuck/looping nodes that accumulate on iOS Safari.
+     Re-decodes cached sample buffers on the new context. */
+  flushVoices() {
+    if (!this.ac) return;
+    this.ac.close();
+    this.ac = new (window.AudioContext || window.webkitAudioContext)();
+    this.wailBuffer = null;
+    this.winBuffer = null;
+    this.loseBuffer = null;
+    this._activeVoices = 0;
+    this._lastImpactTime = 0;
+    // Re-decode samples on the new context if we have the source data
+    if (this._wailB64) this._decodeBuffer(this._wailB64, "wailBuffer");
+    if (this._winB64)  this._decodeBuffer(this._winB64,  "winBuffer");
+    if (this._loseB64) this._decodeBuffer(this._loseB64, "loseBuffer");
+  }
+
   /* Call once from a user-gesture handler (Start button) to unlock AudioContext.
      Pass useSampled=1 to load base64 samples from bigred-sounds.js; 0 for synth-only. */
   init(useSampled = 1) {
@@ -51,19 +73,23 @@ export class AudioEngine {
     if (useSampled) this._loadSamples();
   }
 
+  _decodeBuffer(b64, key) {
+    this.ac
+      .decodeAudioData(_b64ToBuffer(b64))
+      .then((buf) => { this[key] = buf; })
+      .catch((e) => console.warn(`[audio] failed to decode ${key}:`, e));
+  }
+
   _loadSamples() {
     import("./bigred-sounds.js")
       .then(({ WAIL_B64, WIN_B64, LOSE_B64 }) => {
-        const decode = (b64, key) =>
-          this.ac
-            .decodeAudioData(_b64ToBuffer(b64))
-            .then((buf) => {
-              this[key] = buf;
-            })
-            .catch((e) => console.warn(`[audio] failed to decode ${key}:`, e));
-        decode(WAIL_B64, "wailBuffer");
-        decode(WIN_B64, "winBuffer");
-        decode(LOSE_B64, "loseBuffer");
+        // Cache the raw b64 strings for use by flushVoices()
+        this._wailB64 = WAIL_B64;
+        this._winB64  = WIN_B64;
+        this._loseB64 = LOSE_B64;
+        this._decodeBuffer(WAIL_B64, "wailBuffer");
+        this._decodeBuffer(WIN_B64,  "winBuffer");
+        this._decodeBuffer(LOSE_B64, "loseBuffer");
       })
       .catch((e) =>
         console.warn("[audio] failed to load bigred-sounds.js:", e),
