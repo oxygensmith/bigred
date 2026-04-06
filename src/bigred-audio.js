@@ -226,6 +226,35 @@ export class AudioEngine {
     }, 130);
   }
 
+  /* Health pickup collected — soft ascending chime */
+  playHealthPickup() {
+    if (!this.ac) return;
+    this._tryPlay((ac, release) => {
+      const t = ac.currentTime;
+      const dur = 0.55;
+      // Two triangle oscillators a fifth apart, sweeping upward
+      const freqs = [523, 784]; // C5, G5
+      freqs.forEach((freq) => {
+        const osc = ac.createOscillator();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq * 0.85, t);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.08, t + dur * 0.4);
+        osc.frequency.exponentialRampToValueAtTime(freq, t + dur);
+
+        const gain = ac.createGain();
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.18, t + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+        osc.connect(gain);
+        gain.connect(ac.destination);
+        osc.start(t);
+        osc.stop(t + dur);
+        osc.onended = release;
+      });
+    }, 600);
+  }
+
   /* Small ball eliminated — sampled wail if loaded, synthesized fallback otherwise */
   playBallEliminated() {
     if (!this.ac) return;

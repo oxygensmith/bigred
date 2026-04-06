@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.3";
+export const VERSION = "1.2.4";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -408,6 +408,7 @@ export class Game {
           finishedAt: null,
           healthAtFinish: 0,
           hitCooldown: 0,
+          healGlow: 0,
           stuck: false,
         };
       },
@@ -745,6 +746,7 @@ export class Game {
     });
     this.smallBalls.forEach((b) => {
       if (b.hitCooldown > 0) b.hitCooldown -= dt;
+      if (b.healGlow > 0) b.healGlow -= dt;
     });
 
     this.updateHealthPickups(dt);
@@ -1079,6 +1081,8 @@ export class Game {
             CONFIG.SMALL_BALL_HEALTH,
             ball.health + missing * CONFIG.HEALTH_PICKUP_HEAL,
           );
+          ball.healGlow = 4.0; // seconds the glow ring lasts
+          this.audio.playHealthPickup();
           // Burst particles in green
           for (let i = 0; i < 10; i++) {
             const angle = (i / 10) * Math.PI * 2;
@@ -1162,6 +1166,7 @@ export class Game {
           }
         }
 
+        small.healGlow = 0;
         small.health -= CONFIG.DAMAGE_PER_SECOND * dt;
         if (small.health <= 0) {
           small.health = 0;
@@ -1551,6 +1556,23 @@ export class Game {
           ctx.strokeStyle = "rgba(255,255,255,0.35)";
           ctx.lineWidth = 2;
           ctx.stroke();
+        }
+        // Heal glow ring — fades out over healGlow seconds
+        if (ball.alive && ball.healGlow > 0) {
+          const glowAlpha = clamp(ball.healGlow / 4.0, 0, 1);
+          const ringRadius = ball.radius + 4 + 2 * (1 - glowAlpha); // expands slightly as it fades
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ringRadius, 0, Math.PI * 2);
+          ctx.strokeStyle = ball.color;
+          ctx.lineWidth = 2.5;
+          ctx.globalAlpha = glowAlpha * 0.85;
+          if (!this.isMobile) {
+            ctx.shadowColor = ball.color;
+            ctx.shadowBlur = 10;
+          }
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
         }
       }
 
