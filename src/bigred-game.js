@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.2";
+export const VERSION = "1.2.3";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -109,6 +109,13 @@ so balls will still differ from each other. */
 
   // ─── Audio ────────────────────────────────────────────────────────────────
   USE_SAMPLED_AUDIO: 0, // 0 = synthesized fallback sounds only; 1 = load base64 samples from sounds.js
+
+  // ─── Health pickups ───────────────────────────────────────────────────────
+  HEALTH_PICKUP_INTERVAL_MS: 10000, // One pickup spawns every this many ms of game time
+  HEALTH_PICKUP_RADIUS: 30, // Visual radius of the icon (px) — 60px diameter
+  HEALTH_PICKUP_HEAL: 0.5, // Fraction of missing health restored on collection
+  HEALTH_PICKUP_LOOKAHEAD: 2000, // How far ahead of current camera to place the pickup (px)
+  HEALTH_PICKUP_MIN_CLEARANCE: 80, // Minimum px above the terrain surface
 
   // ─── Terrain generation ───────────────────────────────────────────────────
   TERRAIN_CHUNKS: 750, // Not used at runtime — chunk count is auto-calculated as 10 segments/sec of game duration
@@ -406,6 +413,8 @@ export class Game {
       },
     );
 
+    this.healthPickups = [];
+    this._lastPickupSpawnMs = 0;
     this.backWallRightX = 0;
     this.backWallFlash = 0;
     this.shakeAmplitude = 0;
@@ -738,6 +747,7 @@ export class Game {
       if (b.hitCooldown > 0) b.hitCooldown -= dt;
     });
 
+    this.updateHealthPickups(dt);
     this.resolveCollisions(dt);
     this.updateCamera(dt);
     this.updateScoreboard();
@@ -1028,6 +1038,68 @@ export class Game {
     }
   }
 
+  updateHealthPickups() {
+    if (this.gameOver) return;
+
+    // Spawn a new pickup every HEALTH_PICKUP_INTERVAL_MS of elapsed game time
+    if (
+      this.elapsedMs - this._lastPickupSpawnMs >=
+        CONFIG.HEALTH_PICKUP_INTERVAL_MS &&
+      !this.finishActive
+    ) {
+      this._lastPickupSpawnMs = this.elapsedMs;
+      const r = CONFIG.HEALTH_PICKUP_RADIUS;
+      // Place it ahead of the camera so it floats into view naturally
+      const spawnX = clamp(
+        this.cameraX + CONFIG.HEALTH_PICKUP_LOOKAHEAD,
+        r,
+        this.sceneWidth - r,
+      );
+      const groundY = this.terrain.getY(spawnX);
+      // Random y between top clearance and terrain surface minus clearance
+      const minY = r + 40;
+      const maxY = groundY - CONFIG.HEALTH_PICKUP_MIN_CLEARANCE - r;
+      const spawnY =
+        minY < maxY ? minY + Math.random() * (maxY - minY) : (minY + maxY) / 2;
+      this.healthPickups.push({ x: spawnX, y: spawnY, r, age: 0 });
+    }
+
+    // Tick age (for pulse animation) and test marble collisions
+    this.healthPickups = this.healthPickups.filter((pickup) => {
+      pickup.age += 1 / 60;
+
+      for (const ball of this.smallBalls) {
+        if (!ball.alive || ball.finished) continue;
+        const dx = ball.x - pickup.x;
+        const dy = ball.y - pickup.y;
+        if (Math.hypot(dx, dy) < ball.radius + pickup.r) {
+          // Heal: restore 50% of missing health
+          const missing = CONFIG.SMALL_BALL_HEALTH - ball.health;
+          ball.health = Math.min(
+            CONFIG.SMALL_BALL_HEALTH,
+            ball.health + missing * CONFIG.HEALTH_PICKUP_HEAL,
+          );
+          // Burst particles in green
+          for (let i = 0; i < 10; i++) {
+            const angle = (i / 10) * Math.PI * 2;
+            const speed = 50 + Math.random() * 80;
+            this.particles.push({
+              x: pickup.x,
+              y: pickup.y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed - 40,
+              radius: 2 + Math.random() * 2,
+              alpha: 1,
+              color: "#6dff8a",
+            });
+          }
+          return false; // consume the pickup
+        }
+      }
+      return true;
+    });
+  }
+
   resolveCollisions(dt) {
     this.smallBalls.forEach((small) => {
       if (!small.alive || small.finished) return;
@@ -1231,9 +1303,57 @@ export class Game {
     this.drawTerrain(ctx);
     this.drawBackWall(ctx);
     this.drawFinishLine(ctx);
+    this.drawHealthPickups(ctx);
     this.drawBalls(ctx);
     this.drawParticles(ctx);
     ctx.restore();
+  }
+
+  drawHealthPickups(ctx) {
+    if (!this.healthPickups.length) return;
+    const r = CONFIG.HEALTH_PICKUP_RADIUS;
+
+    this.healthPickups.forEach((pickup) => {
+      // Gentle pulse: scale between 0.92 and 1.0
+      const pulse = 0.96 + 0.04 * Math.sin(pickup.age * 3.5);
+      const pr = r * pulse;
+
+      ctx.save();
+      ctx.translate(pickup.x, pickup.y);
+
+      // Outer glow
+      if (!this.isMobile) {
+        ctx.shadowColor = "rgba(109, 255, 138, 0.6)";
+        ctx.shadowBlur = 18;
+      }
+
+      // Rounded rectangle body
+      const hw = pr * 0.9; // half-width of the square part
+      ctx.beginPath();
+      ctx.roundRect(-hw, -hw, hw * 2, hw * 2, hw * 0.35);
+      ctx.fillStyle = "rgba(18, 38, 24, 0.88)";
+      ctx.fill();
+      ctx.strokeStyle = "#6dff8a";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+
+      // Plus / cross
+      const arm = hw * 0.55;
+      const thick = hw * 0.22;
+      ctx.fillStyle = "#6dff8a";
+      ctx.beginPath();
+      // Horizontal bar
+      ctx.rect(-arm, -thick, arm * 2, thick * 2);
+      ctx.fill();
+      ctx.beginPath();
+      // Vertical bar
+      ctx.rect(-thick, -arm, thick * 2, arm * 2);
+      ctx.fill();
+
+      ctx.restore();
+    });
   }
 
   drawParticles(ctx) {
