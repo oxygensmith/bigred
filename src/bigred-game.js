@@ -436,7 +436,7 @@ export class Game {
     this.finishGateAge = 0;
     this.lastTimestamp = 0;
     this.elapsedMs = 0;
-    this._lastAudioFlushMs = 0;
+    /* this._lastAudioFlushMs = 0; */
     this.finishActive = false;
     this.cameraX = 0;
     this.buildHealthGrid();
@@ -608,10 +608,10 @@ export class Game {
       this.elapsedMs += dt * 1000;
 
       // Periodic audio flush — clears stuck nodes on iOS Safari every 30 s
-      if (this.isMobile && this.elapsedMs - this._lastAudioFlushMs >= 30000) {
+      /* if (this.isMobile && this.elapsedMs - this._lastAudioFlushMs >= 30000) {
         this._lastAudioFlushMs = this.elapsedMs;
         this.audio.flushVoices();
-      }
+      } */
 
       if (!this.finishActive && this.elapsedMs >= this.gameDurationMs) {
         this.finishActive = true;

@@ -1,8 +1,20 @@
-// bigred-audio.js - v 1.2.0
+// bigred-audio.js - v 1.3.0
 
 /* Synthesized sound effects via Web Audio API.
    Sampled buffers are loaded asynchronously from bigred-sounds.js;
-   synthesized fallbacks play immediately while they arrive. */
+   synthesized fallbacks play immediately while they arrive.
+
+   Safari fix: noise buffers for the two high-frequency sounds (ground impact,
+   ball struck) are pre-baked once at init() and reused via cheap
+   BufferSourceNode re-creation each hit. The downstream filter/distortion/gain
+   graph is built once per voice slot and kept alive for the session — Safari's
+   audio graph GC is slow, so we never tear down nodes during gameplay.
+
+   Voice release uses setTimeout only (not onended) because Safari's onended
+   is unreliable on OscillatorNodes and inconsistent on BufferSourceNodes when
+   the context has been through a suspend/resume cycle. The fallback setTimeout
+   from v1.2 is now the primary mechanism; a small buffer is added to each
+   duration so the slot is never released before the sound actually ends. */
 
 const _b64ToBuffer = (b64) => {
   const binary = atob(b64);
@@ -21,6 +33,16 @@ const makeDistortionCurve = (amount) => {
   return curve;
 };
 
+/* Build a mono white-noise AudioBuffer of the given duration.
+   Called once per sound type at init() — not per-frame. */
+const _bakeNoise = (ac, duration) => {
+  const size = Math.ceil(ac.sampleRate * duration);
+  const buf = ac.createBuffer(1, size, ac.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+  return buf;
+};
+
 export class AudioEngine {
   constructor() {
     this.ac = null;
@@ -29,7 +51,20 @@ export class AudioEngine {
     this.loseBuffer = null;
     this._activeVoices = 0;
     this._lastImpactTime = 0;
-    // Stored b64 strings so we can re-decode after a periodic flush
+
+    /* Pre-baked noise buffers — populated in _buildGraphs() */
+    this._impactNoiseBuf = null;
+    this._struckNoiseBuf = null;
+
+    /* Persistent downstream graphs — built once, reused every hit.
+       Each entry: { lpf/bpf, dist, gain }
+       We swap in a fresh BufferSourceNode each play by connecting to the
+       first node in the chain (lpf or bpf). The gain envelope is re-triggered
+       each play via cancelScheduledValues + setValueAtTime. */
+    this._impactGraph = null; // { lpf, dist, gain }
+    this._struckGraph = null; // { bpf, dist, gain }
+
+    /* Cached b64 strings so a future reset+init can re-decode on a fresh context */
     this._wailB64 = null;
     this._winB64 = null;
     this._loseB64 = null;
@@ -45,50 +80,86 @@ export class AudioEngine {
       this.loseBuffer = null;
       this._activeVoices = 0;
       this._lastImpactTime = 0;
+      this._impactNoiseBuf = null;
+      this._struckNoiseBuf = null;
+      this._impactGraph = null;
+      this._struckGraph = null;
     }
-  }
-
-  /* Periodic hard flush: close the AudioContext and open a fresh one.
-     Clears any stuck/looping nodes that accumulate on iOS Safari.
-     Re-decodes cached sample buffers on the new context. */
-  flushVoices() {
-    if (!this.ac) return;
-    this.ac.close();
-    this.ac = new (window.AudioContext || window.webkitAudioContext)();
-    this.wailBuffer = null;
-    this.winBuffer = null;
-    this.loseBuffer = null;
-    this._activeVoices = 0;
-    this._lastImpactTime = 0;
-    // Re-decode samples on the new context if we have the source data
-    if (this._wailB64) this._decodeBuffer(this._wailB64, "wailBuffer");
-    if (this._winB64)  this._decodeBuffer(this._winB64,  "winBuffer");
-    if (this._loseB64) this._decodeBuffer(this._loseB64, "loseBuffer");
   }
 
   /* Call once from a user-gesture handler (Start button) to unlock AudioContext.
      Pass useSampled=1 to load base64 samples from bigred-sounds.js; 0 for synth-only. */
   init(useSampled = 1) {
     this.ac = new (window.AudioContext || window.webkitAudioContext)();
+    this._buildGraphs();
     if (useSampled) this._loadSamples();
+  }
+
+  /* Pre-bake noise buffers and build the persistent downstream graphs.
+     Must be called immediately after this.ac is created. */
+  _buildGraphs() {
+    const ac = this.ac;
+
+    // ── Ground impact: noise → lpf → dist → gain ──────────────────────────
+    this._impactNoiseBuf = _bakeNoise(ac, 0.5); // slightly longer than dur so stop() always lands inside
+
+    const impactLpf = ac.createBiquadFilter();
+    impactLpf.type = "lowpass";
+    impactLpf.frequency.value = 55;
+    impactLpf.Q.value = 4;
+
+    const impactDist = ac.createWaveShaper();
+    impactDist.oversample = "4x";
+    impactDist.curve = makeDistortionCurve(400); // placeholder; overwritten per-play
+
+    const impactGain = ac.createGain();
+    impactGain.gain.value = 0;
+
+    impactLpf.connect(impactDist);
+    impactDist.connect(impactGain);
+    impactGain.connect(ac.destination);
+
+    this._impactGraph = { lpf: impactLpf, dist: impactDist, gain: impactGain };
+
+    // ── Ball struck: noise → bpf → dist → gain ────────────────────────────
+    this._struckNoiseBuf = _bakeNoise(ac, 0.18);
+
+    const struckBpf = ac.createBiquadFilter();
+    struckBpf.type = "bandpass";
+    struckBpf.frequency.value = 1400;
+    struckBpf.Q.value = 0.25;
+
+    const struckDist = ac.createWaveShaper();
+    struckDist.curve = makeDistortionCurve(950);
+    struckDist.oversample = "4x";
+
+    const struckGain = ac.createGain();
+    struckGain.gain.value = 0;
+
+    struckBpf.connect(struckDist);
+    struckDist.connect(struckGain);
+    struckGain.connect(ac.destination);
+
+    this._struckGraph = { bpf: struckBpf, dist: struckDist, gain: struckGain };
   }
 
   _decodeBuffer(b64, key) {
     this.ac
       .decodeAudioData(_b64ToBuffer(b64))
-      .then((buf) => { this[key] = buf; })
+      .then((buf) => {
+        this[key] = buf;
+      })
       .catch((e) => console.warn(`[audio] failed to decode ${key}:`, e));
   }
 
   _loadSamples() {
     import("./bigred-sounds.js")
       .then(({ WAIL_B64, WIN_B64, LOSE_B64 }) => {
-        // Cache the raw b64 strings for use by flushVoices()
         this._wailB64 = WAIL_B64;
-        this._winB64  = WIN_B64;
+        this._winB64 = WIN_B64;
         this._loseB64 = LOSE_B64;
         this._decodeBuffer(WAIL_B64, "wailBuffer");
-        this._decodeBuffer(WIN_B64,  "winBuffer");
+        this._decodeBuffer(WIN_B64, "winBuffer");
         this._decodeBuffer(LOSE_B64, "loseBuffer");
       })
       .catch((e) =>
@@ -96,9 +167,8 @@ export class AudioEngine {
       );
   }
 
-  /* Resume a suspended context, then invoke fn(ac) with a snapshotted reference.
-     Snapshotting ac here prevents a concurrent reset() from causing node
-     creation on an already-closed context. */
+  /* Resume a suspended context then invoke fn(ac) with a snapshotted reference.
+     Snapshot prevents a concurrent reset() from handing a closed context to fn. */
   _resume(fn) {
     if (!this.ac) return;
     const ac = this.ac;
@@ -112,128 +182,97 @@ export class AudioEngine {
   }
 
   /* Voice-limited wrapper — all playback routes through here.
-     Increments _activeVoices before the async resume; the caller
-     supplies a release() callback to decrement when the sound ends.
-     Using onended (where available) is more accurate than setTimeout,
-     but setTimeout is kept as a fallback for nodes without onended. */
-  _tryPlay(fn, fallbackDurationMs = 500) {
+     durationMs is the expected sound length; the slot is released after
+     durationMs + 150 ms to ensure the sound has genuinely finished.
+     onended is intentionally not used — unreliable on Safari OscillatorNodes
+     and inconsistent on BufferSourceNodes after context suspend/resume. */
+  _tryPlay(fn, durationMs = 500) {
     if (!this.ac) return;
-    if (this._activeVoices >= 6) return;
+    if (this._activeVoices >= 8) return;
     this._activeVoices++;
-
     const release = () => {
       this._activeVoices = Math.max(0, this._activeVoices - 1);
     };
-
     this._resume((ac) => {
-      fn(ac, release);
-      // Fallback: release the voice slot even if onended never fires
-      setTimeout(release, fallbackDurationMs + 200);
+      fn(ac);
+      setTimeout(release, durationMs + 150);
     });
-  }
-
-  // ─── Noise / distortion helpers (operate on a passed-in ac snapshot) ────────
-
-  _noise(ac, duration) {
-    const size = Math.ceil(ac.sampleRate * duration);
-    const buf = ac.createBuffer(1, size, ac.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
-    const src = ac.createBufferSource();
-    src.buffer = buf;
-    return src;
-  }
-
-  _distort(ac, amount) {
-    const node = ac.createWaveShaper();
-    node.curve = makeDistortionCurve(amount);
-    node.oversample = "4x";
-    return node;
   }
 
   // ─── Public sound triggers ───────────────────────────────────────────────────
 
-  /* Big Red hits the ground — low rumble, intensity 0..1 */
+  /* Big Red hits the ground — low rumble + sine sweep, intensity 0..1.
+     Uses the persistent _impactGraph; only a BufferSourceNode + OscillatorNode
+     are created per call. The distortion curve is updated in-place for intensity. */
   playGroundImpact(intensity) {
-    if (!this.ac) return;
+    if (!this.ac || !this._impactGraph) return;
     const now = this.ac.currentTime;
     if (now - this._lastImpactTime < 0.08) return;
     this._lastImpactTime = now;
 
-    this._tryPlay((ac, release) => {
+    this._tryPlay((ac) => {
+      const g = this._impactGraph;
       const t = ac.currentTime;
       const dur = 0.45;
 
-      const noise = this._noise(ac, dur);
-      const lpf = ac.createBiquadFilter();
-      lpf.type = "lowpass";
-      lpf.frequency.value = 55;
-      lpf.Q.value = 4;
+      // Update distortion curve in-place for this hit's intensity
+      g.dist.curve = makeDistortionCurve(200 + intensity * 400);
 
+      // Re-trigger the persistent gain envelope
+      g.gain.gain.cancelScheduledValues(t);
+      g.gain.gain.setValueAtTime(intensity * 0.85, t);
+      g.gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+      // Fresh noise source connected to the persistent lpf
+      const noise = ac.createBufferSource();
+      noise.buffer = this._impactNoiseBuf;
+      noise.connect(g.lpf);
+      noise.start(t);
+      noise.stop(t + dur);
+
+      // Fresh oscillator for the sub-bass sweep
       const osc = ac.createOscillator();
       osc.type = "sine";
       osc.frequency.setValueAtTime(45, t);
       osc.frequency.exponentialRampToValueAtTime(18, t + dur);
-
-      const dist = this._distort(ac, 200 + intensity * 400);
-
-      const gain = ac.createGain();
-      gain.gain.setValueAtTime(intensity * 0.85, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-
-      noise.connect(lpf);
-      lpf.connect(dist);
-      osc.connect(dist);
-      dist.connect(gain);
-      gain.connect(ac.destination);
-
-      noise.onended = release;
-      noise.start(t);
+      osc.connect(g.lpf);
       osc.start(t);
-      noise.stop(t + dur);
       osc.stop(t + dur);
     }, 450);
   }
 
-  /* Small ball struck — short tearing noise burst */
+  /* Small ball struck — short tearing noise burst.
+     Uses the persistent _struckGraph; only a BufferSourceNode per call. */
   playBallStruck() {
-    if (!this.ac) return;
+    if (!this.ac || !this._struckGraph) return;
 
-    this._tryPlay((ac, release) => {
+    this._tryPlay((ac) => {
+      const g = this._struckGraph;
       const t = ac.currentTime;
       const dur = 0.13;
 
-      const noise = this._noise(ac, dur);
-      const bpf = ac.createBiquadFilter();
-      bpf.type = "bandpass";
-      bpf.frequency.value = 1400;
-      bpf.Q.value = 0.25;
+      g.gain.gain.cancelScheduledValues(t);
+      g.gain.gain.setValueAtTime(0.38, t);
+      g.gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
 
-      const dist = this._distort(ac, 950);
-
-      const gain = ac.createGain();
-      gain.gain.setValueAtTime(0.38, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-
-      noise.connect(bpf);
-      bpf.connect(dist);
-      dist.connect(gain);
-      gain.connect(ac.destination);
-
-      noise.onended = release;
+      const noise = ac.createBufferSource();
+      noise.buffer = this._struckNoiseBuf;
+      noise.connect(g.bpf);
       noise.start(t);
       noise.stop(t + dur);
     }, 130);
   }
 
-  /* Health pickup collected — soft ascending chime */
+  /* Health pickup collected — soft ascending chime.
+     Low frequency event, so full node creation per call is fine. */
   playHealthPickup() {
     if (!this.ac) return;
-    this._tryPlay((ac, release) => {
+
+    this._tryPlay((ac) => {
       const t = ac.currentTime;
       const dur = 0.55;
-      // Two triangle oscillators a fifth apart, sweeping upward
       const freqs = [523, 784]; // C5, G5
+
       freqs.forEach((freq) => {
         const osc = ac.createOscillator();
         osc.type = "triangle";
@@ -250,7 +289,6 @@ export class AudioEngine {
         gain.connect(ac.destination);
         osc.start(t);
         osc.stop(t + dur);
-        osc.onended = release;
       });
     }, 600);
   }
@@ -259,43 +297,41 @@ export class AudioEngine {
   playBallEliminated() {
     if (!this.ac) return;
 
-    this._tryPlay((ac, release) => {
+    this._tryPlay((ac) => {
       if (this.wailBuffer) {
-        this._playWailSample(ac, release);
+        this._playWailSample(ac);
       } else {
-        this._playWailSynth(ac, release);
+        this._playWailSynth(ac);
       }
-    }, 850);
+    }, 900);
   }
 
-  /* End-screen stings — sampled if loaded, synthesized fallback otherwise */
+  /* End-screen stings */
   playEscaped() {
     if (!this.ac) return;
-    this._tryPlay((ac, release) => {
+    this._tryPlay((ac) => {
       if (this.winBuffer) {
-        this._playSample(ac, this.winBuffer, 0.5, release);
+        this._playSample(ac, this.winBuffer, 0.5);
       } else {
         this._playEscapedSynth(ac);
-        setTimeout(release, 600);
       }
     }, 1000);
   }
 
   playBigRedWins() {
     if (!this.ac) return;
-    this._tryPlay((ac, release) => {
+    this._tryPlay((ac) => {
       if (this.loseBuffer) {
-        this._playSample(ac, this.loseBuffer, 0.5, release);
+        this._playSample(ac, this.loseBuffer, 0.5);
       } else {
         this._playBigRedWinsSynth(ac);
-        setTimeout(release, 900);
       }
     }, 1000);
   }
 
   // ─── Private playback implementations ───────────────────────────────────────
 
-  _playSample(ac, buffer, gainValue, release) {
+  _playSample(ac, buffer, gainValue) {
     const t = ac.currentTime;
     const src = ac.createBufferSource();
     src.buffer = buffer;
@@ -303,28 +339,28 @@ export class AudioEngine {
     gainNode.gain.setValueAtTime(gainValue, t);
     src.connect(gainNode);
     gainNode.connect(ac.destination);
-    src.onended = release;
     src.start(t);
   }
 
-  _playWailSample(ac, release) {
+  _playWailSample(ac) {
     const t = ac.currentTime;
     const src = ac.createBufferSource();
     src.buffer = this.wailBuffer;
 
-    const dist = this._distort(ac, 400);
+    const dist = ac.createWaveShaper();
+    dist.curve = makeDistortionCurve(400);
+    dist.oversample = "4x";
+
     const gain = ac.createGain();
     gain.gain.setValueAtTime(0.09, t);
 
     src.connect(dist);
     dist.connect(gain);
     gain.connect(ac.destination);
-
-    src.onended = release;
     src.start(t);
   }
 
-  _playWailSynth(ac, release) {
+  _playWailSynth(ac) {
     const t = ac.currentTime;
     const dur = 0.85;
 
@@ -341,7 +377,10 @@ export class AudioEngine {
     osc2.frequency.linearRampToValueAtTime(720, t + 0.04);
     osc2.frequency.exponentialRampToValueAtTime(60, t + dur);
 
-    const dist = this._distort(ac, 750);
+    const dist = ac.createWaveShaper();
+    dist.curve = makeDistortionCurve(750);
+    dist.oversample = "4x";
+
     const gain = ac.createGain();
     gain.gain.setValueAtTime(0.0, t);
     gain.gain.linearRampToValueAtTime(0.28, t + 0.03);
@@ -352,11 +391,12 @@ export class AudioEngine {
     dist.connect(gain);
     gain.connect(ac.destination);
 
-    osc1.onended = release;
     osc1.start(t);
     osc2.start(t);
     osc1.stop(t + dur);
     osc2.stop(t + dur);
+    /* No onended — unreliable on Safari OscillatorNodes.
+       Voice slot released by _tryPlay's setTimeout. */
   }
 
   /* Synthesized "you escaped" fanfare — ascending major arpeggio */
@@ -389,7 +429,10 @@ export class AudioEngine {
     osc.frequency.setValueAtTime(320, t);
     osc.frequency.exponentialRampToValueAtTime(60, t + dur);
 
-    const dist = this._distort(ac, 300);
+    const dist = ac.createWaveShaper();
+    dist.curve = makeDistortionCurve(300);
+    dist.oversample = "4x";
+
     const gain = ac.createGain();
     gain.gain.setValueAtTime(0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
