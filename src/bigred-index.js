@@ -14,6 +14,7 @@ window.addEventListener("DOMContentLoaded", () => {
     endHeadline: document.getElementById("end-headline"),
     endSubline: document.getElementById("end-subline"),
     startOverlay: document.getElementById("start-overlay"),
+    pauseOverlay: document.getElementById("pause-overlay"),
   };
 
   const game = new Game(canvas, ui);
@@ -60,6 +61,56 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("restart-btn").addEventListener("click", () => {
     game.showStartScreen();
   });
+
+  // ── In-game control buttons ───────────────────────────────────────────────
+  const TIME_STEPS = [0.25, 0.5, 1, 2, 4, 8, 16];
+
+  const btnPauseGame    = document.getElementById("ctrl-pause-game");
+  const btnPauseBigRed  = document.getElementById("ctrl-pause-bigred");
+  const btnPauseMarbles = document.getElementById("ctrl-pause-marbles");
+  const btnSpeedDown    = document.getElementById("ctrl-speed-down");
+  const btnSpeedUp      = document.getElementById("ctrl-speed-up");
+  const speedDisplay    = document.getElementById("ctrl-speed-display");
+
+  const syncControlButtons = () => {
+    btnPauseGame.classList.toggle("ctrl-btn--active", game.paused);
+    btnPauseBigRed.classList.toggle("ctrl-btn--active", game.largeBallPaused);
+    btnPauseMarbles.classList.toggle("ctrl-btn--active", game.allBallsPaused);
+    speedDisplay.textContent = `${game.timeScale}×`;
+    btnSpeedDown.disabled = TIME_STEPS.indexOf(game.timeScale) === 0;
+    btnSpeedUp.disabled   = TIME_STEPS.indexOf(game.timeScale) === TIME_STEPS.length - 1;
+  };
+
+  btnPauseGame.addEventListener("click", () => {
+    if (!game.gameOver) { game.togglePause(); syncControlButtons(); }
+  });
+
+  btnPauseBigRed.addEventListener("click", () => {
+    game.largeBallPaused = !game.largeBallPaused;
+    if (!game.largeBallPaused) game.largeBallSpeedScale = 1;
+    syncControlButtons();
+  });
+
+  btnPauseMarbles.addEventListener("click", () => {
+    game.allBallsPaused = !game.allBallsPaused;
+    syncControlButtons();
+  });
+
+  btnSpeedDown.addEventListener("click", () => {
+    const idx = TIME_STEPS.indexOf(game.timeScale);
+    if (idx > 0) { game.timeScale = TIME_STEPS[idx - 1]; syncControlButtons(); }
+  });
+
+  btnSpeedUp.addEventListener("click", () => {
+    const idx = TIME_STEPS.indexOf(game.timeScale);
+    if (idx < TIME_STEPS.length - 1) { game.timeScale = TIME_STEPS[idx + 1]; syncControlButtons(); }
+  });
+
+  // Keep buttons in sync when keyboard shortcuts are used
+  const _origTogglePause = game.togglePause.bind(game);
+  game.togglePause = () => { _origTogglePause(); syncControlButtons(); };
+
+  syncControlButtons();
 
   const creditsModal = document.getElementById("credits-modal");
   const creditsBtn = document.getElementById("credits-btn");

@@ -411,6 +411,7 @@ export class Game {
     this.shakePhase = 0;
     this.particles = [];
     this.paused = false;
+    this.ui.pauseOverlay.classList.add("pause-overlay--hidden");
     this.largeBallPaused = false;
     this.allBallsPaused = false;
     this.largeBallSpeedScale = 1;
@@ -512,6 +513,7 @@ export class Game {
 
   togglePause() {
     this.paused = !this.paused;
+    this.ui.pauseOverlay.classList.toggle("pause-overlay--hidden", !this.paused);
   }
 
   showEndOverlay() {
@@ -1203,15 +1205,6 @@ export class Game {
     this.drawParticles(ctx);
     ctx.restore();
 
-    if (this.paused && !this.gameOver) {
-      ctx.fillStyle = "rgba(12, 14, 27, 0.74)";
-      ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = "#eef3ff";
-      ctx.font = "bold 36px Inter, system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("Paused — press Space to resume", width / 2, height / 2);
-    }
   }
 
   drawParticles(ctx) {

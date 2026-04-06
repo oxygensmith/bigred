@@ -18,6 +18,24 @@
         <div class="game-column">
           <header class="top-bar">
             <div class="logo">Big Red</div>
+            <div class="game-controls">
+              <div class="game-controls__group">
+                <span class="game-controls__label">Pause</span>
+                <button class="ctrl-btn" id="ctrl-pause-game">Game</button>
+                <button class="ctrl-btn" id="ctrl-pause-bigred">Big Red</button>
+                <button class="ctrl-btn" id="ctrl-pause-marbles">
+                  Marbles
+                </button>
+              </div>
+              <div class="game-controls__group">
+                <span class="game-controls__label">Speed</span>
+                <button class="ctrl-btn" id="ctrl-speed-down">−</button>
+                <span id="ctrl-speed-display" class="game-controls__speed"
+                  >1×</span
+                >
+                <button class="ctrl-btn" id="ctrl-speed-up">+</button>
+              </div>
+            </div>
             <div class="status-panel">
               <div id="timer">Time 05:00</div>
               <div id="alive-summary">Alive 20 / 20</div>
@@ -77,6 +95,10 @@
               </div>
               <button id="start-btn" class="start-btn">Start</button>
             </div>
+            <div id="pause-overlay" class="pause-overlay pause-overlay--hidden">
+              <p class="pause-overlay__text">Paused</p>
+              <p class="pause-overlay__hint">Press Space to resume</p>
+            </div>
             <div id="end-overlay" class="end-overlay end-overlay--hidden">
               <p id="end-headline" class="end-overlay__headline"></p>
               <p id="end-subline" class="end-overlay__subline"></p>
@@ -93,7 +115,7 @@
     </div>
 
     <p class="version-line">
-      Version 1.1.01 &nbsp;·&nbsp;
+      Version 1.1.1 &nbsp;·&nbsp;
       <button class="credits-btn" id="credits-btn">Credits</button>
     </p>
 
