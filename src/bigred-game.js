@@ -412,6 +412,7 @@ export class Game {
     this.particles = [];
     this.paused = false;
     this.ui.pauseOverlay.classList.add("pause-overlay--hidden");
+    this.timeScale = 1;
     this.largeBallPaused = false;
     this.allBallsPaused = false;
     this.largeBallSpeedScale = 1;
@@ -494,6 +495,10 @@ export class Game {
   }
 
   showStartScreen() {
+    this.timeScale = 1;
+    this.paused = false;
+    this.largeBallPaused = false;
+    this.allBallsPaused = false;
     this.ui.endOverlay.classList.add("end-overlay--hidden");
     this.ui.startOverlay.classList.remove("start-overlay--hidden");
   }

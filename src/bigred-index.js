@@ -72,6 +72,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("restart-btn").addEventListener("click", () => {
     game.showStartScreen();
+    syncControlButtons();
   });
 
   // ── In-game control buttons ───────────────────────────────────────────────
