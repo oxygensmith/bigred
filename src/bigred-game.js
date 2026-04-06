@@ -248,6 +248,7 @@ export class Game {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.ui = ui;
+    this.isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     this.paused = false;
     this.timeScale = 1;
     this.lastTimestamp = 0;
@@ -1183,7 +1184,7 @@ export class Game {
     ctx.save();
     ctx.fillStyle = `rgb(${c},${c},${c})`;
     ctx.shadowColor = `rgba(255,255,255,${this.backWallFlash * 0.7})`;
-    ctx.shadowBlur = 24 * this.backWallFlash;
+    ctx.shadowBlur = this.isMobile ? 0 : 24 * this.backWallFlash;
     ctx.fillRect(x, 0, 20, CONFIG.SCENE_HEIGHT);
     ctx.restore();
   }
@@ -1280,7 +1281,7 @@ export class Game {
     const glowColor = `rgba(${glowR},${glowG},${glowB},${glowAlpha.toFixed(2)})`;
 
     ctx.shadowColor = glowColor;
-    ctx.shadowBlur = 18 + closeFrac * 14;
+    ctx.shadowBlur = this.isMobile ? 0 : 18 + closeFrac * 14;
 
     // Top door
     ctx.fillStyle = doorColor;
@@ -1321,14 +1322,14 @@ export class Game {
         ctx.translate(ball.x, ball.y);
         ctx.rotate(ball.angle);
         ctx.shadowColor = "rgba(232, 73, 63, 0.5)";
-        ctx.shadowBlur = 28;
+        ctx.shadowBlur = this.isMobile ? 0 : 28;
         ctx.drawImage(this.bigRedImage, -size / 2, -size / 2, size, size);
       } else {
         // Small balls: filled circle
         ctx.beginPath();
         ctx.fillStyle = ball.color;
         ctx.shadowColor = "rgba(0, 0, 0, 0.35)";
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = this.isMobile ? 0 : 12;
         ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
