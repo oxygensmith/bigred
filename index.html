@@ -187,6 +187,27 @@
       <button id="start-btn" class="start-btn">Start</button>
     </div>
 
+    <div id="leaderboard-overlay" class="leaderboard-overlay leaderboard-overlay--hidden">
+      <div class="leaderboard-overlay__box">
+        <p class="leaderboard-overlay__title">Leaderboard</p>
+        <div class="leaderboard-overlay__table-wrap">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Winner</th>
+                <th>Duration</th>
+                <th>Landscape</th>
+                <th>Tiebreaker</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+          </table>
+        </div>
+        <p class="leaderboard-overlay__hint">Press L or Esc to close</p>
+      </div>
+    </div>
+
     <div id="pause-overlay" class="pause-overlay pause-overlay--hidden">
       <div class="pause-overlay__box">
         <p class="pause-overlay__text">Paused</p>

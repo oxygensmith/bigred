@@ -32,6 +32,8 @@ window.addEventListener("DOMContentLoaded", () => {
     endSubline: document.getElementById("end-subline"),
     startOverlay: document.getElementById("start-overlay"),
     pauseOverlay: document.getElementById("pause-overlay"),
+    leaderboardOverlay: document.getElementById("leaderboard-overlay"),
+    leaderboardBody: document.getElementById("leaderboard-body"),
   };
 
   const game = new Game(canvas, ui);

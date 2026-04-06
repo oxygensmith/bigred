@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.6";
+export const VERSION = "1.2.7";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -279,6 +279,7 @@ export class Game {
     window.addEventListener("resize", () => this.resize());
     this.gameDurationMs = CONFIG.GAME_DURATION_MS;
     this.tiebreaker = "health";
+    this.leaderboardVisible = false;
     this.loopRunning = false;
     this._rafId = null;
 
@@ -286,7 +287,18 @@ export class Game {
       if (event.code === "Space") {
         event.preventDefault();
         if (this.gameOver) this.showStartScreen();
-        else this.togglePause();
+        else if (!this.leaderboardVisible) this.togglePause();
+      }
+      if (event.code === "KeyL") {
+        event.preventDefault();
+        if (this.leaderboardVisible) this.hideLeaderboard();
+        else this.showLeaderboard();
+      }
+      if (event.code === "Escape") {
+        if (this.leaderboardVisible) {
+          event.preventDefault();
+          this.hideLeaderboard();
+        }
       }
       if (event.code === "KeyP") {
         event.preventDefault();
@@ -532,6 +544,7 @@ export class Game {
     this.audio.init(CONFIG.USE_SAMPLED_AUDIO);
     this.gameDurationMs = durationMs;
     this.tiebreaker = tiebreaker;
+    this.landscapeSmoothness = landscapeSmoothness;
     CONFIG.LANDSCAPE_SMOOTHNESS = landscapeSmoothness;
     this.ui.startOverlay.classList.add("start-overlay--hidden");
     this.reset();
@@ -577,6 +590,83 @@ export class Game {
 
     if (isEscaped) this.audio.playEscaped();
     else this.audio.playBigRedWins();
+
+    this.recordResult();
+  }
+
+  recordResult() {
+    const durationLabels = {
+      120000: "2 min",
+      180000: "3 min",
+      300000: "5 min",
+      600000: "10 min",
+      1200000: "20 min",
+    };
+    const landscapeLabels = {
+      36: "Rocky",
+      80: "Average",
+      180: "Gentle",
+    };
+
+    const isEscaped = this.gameOver === "ESCAPED";
+    const winner = isEscaped ? `Team ${this.escapedTeam.name}` : "Big Red";
+    const color = isEscaped ? this.escapedTeam.color : "#e8493f";
+    const duration =
+      durationLabels[this.gameDurationMs] ??
+      `${this.gameDurationMs / 60000} min`;
+    const landscape =
+      landscapeLabels[this.landscapeSmoothness] ??
+      String(this.landscapeSmoothness);
+    const winType =
+      this.tiebreaker === "health" ? "Highest health" : "Fastest team";
+
+    const row = [VERSION, winner, duration, landscape, winType, color].join(
+      ", ",
+    );
+
+    const stored = localStorage.getItem("bigred_results") ?? "";
+    localStorage.setItem("bigred_results", stored ? `${stored}\n${row}` : row);
+  }
+
+  showLeaderboard() {
+    if (this.gameOver) return;
+    if (!this.paused) {
+      this.paused = true;
+      this.ui.pauseOverlay.classList.add("pause-overlay--hidden");
+    }
+    this.leaderboardVisible = true;
+
+    const stored = localStorage.getItem("bigred_results") ?? "";
+    const rows = stored ? stored.trim().split("\n").reverse() : [];
+
+    if (rows.length === 0) {
+      this.ui.leaderboardBody.innerHTML = `<tr><td colspan="5" class="leaderboard-table__empty">No results yet</td></tr>`;
+    } else {
+      this.ui.leaderboardBody.innerHTML = rows
+        .map((row, i) => {
+          const [, winner, duration, landscape, winType, color] =
+            row.split(", ");
+          const c = color ?? (winner === "Big Red" ? "#e8493f" : "#ffffff");
+          return `<tr style="color:${c};--row-color:${c}">
+            <td>${i + 1}</td>
+            <td>${winner}</td>
+            <td>${duration}</td>
+            <td>${landscape}</td>
+            <td>${winType}</td>
+          </tr>`;
+        })
+        .join("");
+    }
+
+    this.ui.leaderboardOverlay.classList.remove("leaderboard-overlay--hidden");
+  }
+
+  hideLeaderboard() {
+    this.leaderboardVisible = false;
+    this.ui.leaderboardOverlay.classList.add("leaderboard-overlay--hidden");
+    if (this.paused) {
+      this.paused = false;
+    }
   }
 
   resize() {
