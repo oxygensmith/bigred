@@ -17,20 +17,40 @@
     <link rel="stylesheet" href="./src/styles/main.scss" />
   </head>
   <body>
-
     <canvas id="game-canvas"></canvas>
 
     <header class="top-bar">
       <div class="logo">Big Red</div>
 
-      <button class="ctrl-btn ctrl-btn--icon" id="ctrl-pause-game" title="Pause / Resume">
+      <button
+        class="ctrl-btn ctrl-btn--icon"
+        id="ctrl-pause-game"
+        title="Pause / Resume"
+      >
         <!-- icon swapped by JS; default = playing → show pause bars -->
-        <svg id="icon-pause" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <rect x="5" y="4" width="4" height="16" rx="1"/>
-          <rect x="15" y="4" width="4" height="16" rx="1"/>
+        <svg
+          id="icon-pause"
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <rect x="5" y="4" width="4" height="16" rx="1" />
+          <rect x="15" y="4" width="4" height="16" rx="1" />
         </svg>
-        <svg id="icon-play" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none">
-          <polygon points="5,3 19,12 5,21"/>
+        <svg
+          id="icon-play"
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+          style="display: none"
+        >
+          <polygon points="5,3 19,12 5,21" />
         </svg>
       </button>
 
@@ -40,18 +60,44 @@
       </div>
 
       <div class="top-bar__actions">
-        <button class="ctrl-btn ctrl-btn--icon" id="ctrl-restart" title="Restart">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74"/>
-            <polyline points="3 3 3 9 9 9"/>
+        <button
+          class="ctrl-btn ctrl-btn--icon"
+          id="ctrl-restart"
+          title="Restart"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74" />
+            <polyline points="3 3 3 9 9 9" />
           </svg>
         </button>
-        <button class="ctrl-btn ctrl-btn--icon" id="ctrl-stats" title="Stats (S)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <rect x="3" y="3" width="7" height="7" rx="1"/>
-            <rect x="14" y="3" width="7" height="7" rx="1"/>
-            <rect x="3" y="14" width="7" height="7" rx="1"/>
-            <rect x="14" y="14" width="7" height="7" rx="1"/>
+        <button
+          class="ctrl-btn ctrl-btn--icon"
+          id="ctrl-stats"
+          title="Stats (S)"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
         </button>
       </div>
@@ -82,7 +128,9 @@
       <p class="start-overlay__title">Big Red</p>
 
       <div class="start-tabs">
-        <button class="start-tab start-tab--active" data-panel="length">Length</button>
+        <button class="start-tab start-tab--active" data-panel="length">
+          Length
+        </button>
         <button class="start-tab" data-panel="landscape">Landscape</button>
         <button class="start-tab" data-panel="gameplay">Gameplay</button>
       </div>
@@ -93,7 +141,12 @@
           <div class="duration-picker">
             <button class="duration-btn" data-ms="120000">2 min</button>
             <button class="duration-btn" data-ms="180000">3 min</button>
-            <button class="duration-btn duration-btn--selected" data-ms="300000">5 min</button>
+            <button
+              class="duration-btn duration-btn--selected"
+              data-ms="300000"
+            >
+              5 min
+            </button>
             <button class="duration-btn" data-ms="600000">10 min</button>
             <button class="duration-btn" data-ms="1200000">20 min</button>
           </div>
@@ -103,7 +156,12 @@
           <p class="start-overlay__label">Landscape</p>
           <div class="duration-picker">
             <button class="landscape-btn" data-smoothness="36">Rocky</button>
-            <button class="landscape-btn landscape-btn--selected" data-smoothness="80">Average</button>
+            <button
+              class="landscape-btn landscape-btn--selected"
+              data-smoothness="80"
+            >
+              Average
+            </button>
             <button class="landscape-btn" data-smoothness="180">Gentle</button>
           </div>
         </div>
@@ -113,7 +171,10 @@
             Most survivors = winning team.<br />Choose the tiebreaker:
           </p>
           <div class="duration-picker tiebreaker-picker">
-            <button class="tiebreaker-btn tiebreaker-btn--selected" data-tb="health">
+            <button
+              class="tiebreaker-btn tiebreaker-btn--selected"
+              data-tb="health"
+            >
               Highest Team total health
             </button>
             <button class="tiebreaker-btn" data-tb="speed">
@@ -127,8 +188,11 @@
     </div>
 
     <div id="pause-overlay" class="pause-overlay pause-overlay--hidden">
-      <p class="pause-overlay__text">Paused</p>
-      <p class="pause-overlay__hint">Press Space to resume</p>
+      <div class="pause-overlay__box">
+        <p class="pause-overlay__text">Paused</p>
+        <button id="resume-btn" class="pause-overlay__resume">Resume &raquo;</button>
+        <p class="pause-overlay__hint">Or press Space to resume</p>
+      </div>
     </div>
 
     <div id="end-overlay" class="end-overlay end-overlay--hidden">
