@@ -133,6 +133,7 @@
         </button>
         <button class="start-tab" data-panel="landscape">Landscape</button>
         <button class="start-tab" data-panel="gameplay">Gameplay</button>
+        <button class="start-tab" data-panel="physics">Physics</button>
       </div>
 
       <div class="start-panels">
@@ -182,12 +183,148 @@
             </button>
           </div>
         </div>
+        <div class="start-panel" id="panel-physics">
+          <div class="physics-tabs">
+            <button
+              class="physics-tab physics-tab--active"
+              data-physics="gravity"
+            >
+              Gravity
+            </button>
+            <button class="physics-tab" data-physics="bounce">Bounce</button>
+            <button class="physics-tab" data-physics="spin">Spin Drive</button>
+            <button class="physics-tab" data-physics="mass">Mass</button>
+          </div>
+          <div class="physics-panels">
+            <div
+              class="physics-panel physics-panel--active"
+              id="physics-gravity"
+            >
+              <p class="start-overlay__label">
+                Gravitational pull on Big Red + Marbles
+              </p>
+              <div class="duration-picker">
+                <button
+                  class="physics-btn"
+                  data-config="GRAVITY"
+                  data-value="180"
+                >
+                  Low
+                </button>
+                <button
+                  class="physics-btn physics-btn--selected"
+                  data-config="GRAVITY"
+                  data-value="360"
+                >
+                  Normal
+                </button>
+                <button
+                  class="physics-btn"
+                  data-config="GRAVITY"
+                  data-value="720"
+                >
+                  High
+                </button>
+              </div>
+            </div>
+
+            <div class="physics-panel" id="physics-bounce">
+              <p class="start-overlay__label">
+                How much Big Red + Marbles bounce off the ground
+              </p>
+              <div class="duration-picker">
+                <button
+                  class="physics-btn"
+                  data-config="GROUND_BOUNCE_SMALL"
+                  data-value="0.45"
+                >
+                  Low
+                </button>
+                <button
+                  class="physics-btn physics-btn--selected"
+                  data-config="GROUND_BOUNCE_SMALL"
+                  data-value="0.78"
+                >
+                  Normal
+                </button>
+                <button
+                  class="physics-btn"
+                  data-config="GROUND_BOUNCE_SMALL"
+                  data-value="0.95"
+                >
+                  High
+                </button>
+              </div>
+            </div>
+
+            <div class="physics-panel" id="physics-spin">
+              <p class="start-overlay__label">
+                Self-propulsion strength of marbles
+              </p>
+              <div class="duration-picker">
+                <button
+                  class="physics-btn"
+                  data-config="SMALL_SPIN_DRIVE"
+                  data-value="45"
+                >
+                  Low
+                </button>
+                <button
+                  class="physics-btn physics-btn--selected"
+                  data-config="SMALL_SPIN_DRIVE"
+                  data-value="90"
+                >
+                  Normal
+                </button>
+                <button
+                  class="physics-btn"
+                  data-config="SMALL_SPIN_DRIVE"
+                  data-value="180"
+                >
+                  High
+                </button>
+              </div>
+            </div>
+
+            <div class="physics-panel" id="physics-mass">
+              <p class="start-overlay__label">
+                Big Red's mass relative to marbles
+              </p>
+              <div class="duration-picker">
+                <button
+                  class="physics-btn"
+                  data-config="LARGE_BALL_MASS_RATIO"
+                  data-value="8"
+                >
+                  Light
+                </button>
+                <button
+                  class="physics-btn physics-btn--selected"
+                  data-config="LARGE_BALL_MASS_RATIO"
+                  data-value="16"
+                >
+                  Normal
+                </button>
+                <button
+                  class="physics-btn"
+                  data-config="LARGE_BALL_MASS_RATIO"
+                  data-value="32"
+                >
+                  Heavy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <button id="start-btn" class="start-btn">Start</button>
     </div>
 
-    <div id="leaderboard-overlay" class="leaderboard-overlay leaderboard-overlay--hidden">
+    <div
+      id="leaderboard-overlay"
+      class="leaderboard-overlay leaderboard-overlay--hidden"
+    >
       <div class="leaderboard-overlay__box">
         <p class="leaderboard-overlay__title">Leaderboard</p>
         <div id="leaderboard-podium" class="leaderboard-podium"></div>
@@ -205,7 +342,9 @@
             <tbody id="leaderboard-body"></tbody>
           </table>
         </div>
-        <button id="close-leaderboard-btn" class="pause-overlay__resume">Close Leaderboard &times;</button>
+        <button id="close-leaderboard-btn" class="pause-overlay__resume">
+          Close Leaderboard &times;
+        </button>
         <p class="leaderboard-overlay__hint">Or press L or Esc to close</p>
       </div>
     </div>
@@ -213,7 +352,9 @@
     <div id="pause-overlay" class="pause-overlay pause-overlay--hidden">
       <div class="pause-overlay__box">
         <p class="pause-overlay__text">Paused</p>
-        <button id="resume-btn" class="pause-overlay__resume">Resume &raquo;</button>
+        <button id="resume-btn" class="pause-overlay__resume">
+          Resume &raquo;
+        </button>
         <p class="pause-overlay__hint">Or press Space to resume</p>
       </div>
     </div>

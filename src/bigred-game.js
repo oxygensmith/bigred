@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.10";
+export const VERSION = "1.2.12";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -521,6 +521,10 @@ export class Game {
     });
   }
 
+  setConfig(key, value) {
+    CONFIG[key] = value;
+  }
+
   showStartScreen() {
     this.timeScale = 1;
     this.paused = false;
@@ -536,7 +540,12 @@ export class Game {
     const demoWidth = this.viewW * 4;
     const demoChunks = Math.round(demoWidth / smoothness);
     const rng = mulberry32(Math.floor(Math.random() * 0xffffffff));
-    this.demoTerrain = createTerrain(demoWidth, CONFIG.SCENE_HEIGHT, demoChunks, rng);
+    this.demoTerrain = createTerrain(
+      demoWidth,
+      CONFIG.SCENE_HEIGHT,
+      demoChunks,
+      rng,
+    );
     this.demoWidth = demoWidth;
     this.demoCameraX = 0;
     this._demoRunning = true;
@@ -544,9 +553,13 @@ export class Game {
     this._demoLastTs = null;
     const loop = (ts) => {
       if (!this._demoRunning) return;
-      const dt = this._demoLastTs ? Math.min((ts - this._demoLastTs) / 1000, 0.05) : 0;
+      const dt = this._demoLastTs
+        ? Math.min((ts - this._demoLastTs) / 1000, 0.05)
+        : 0;
       this._demoLastTs = ts;
-      this.demoCameraX = (this.demoCameraX + dt * this.demoSpeed) % (this.demoWidth - this.viewW);
+      this.demoCameraX =
+        (this.demoCameraX + dt * this.demoSpeed) %
+        (this.demoWidth - this.viewW);
       this.drawDemo();
       this._demoRafId = requestAnimationFrame(loop);
     };
@@ -583,11 +596,17 @@ export class Game {
     const right = this.demoCameraX + w + 60;
     let startIdx = 0;
     for (let i = 1; i < allPoints.length; i++) {
-      if (allPoints[i].x >= left) { startIdx = Math.max(0, i - 1); break; }
+      if (allPoints[i].x >= left) {
+        startIdx = Math.max(0, i - 1);
+        break;
+      }
     }
     let endIdx = allPoints.length - 1;
     for (let i = startIdx; i < allPoints.length; i++) {
-      if (allPoints[i].x > right) { endIdx = Math.min(allPoints.length - 1, i + 1); break; }
+      if (allPoints[i].x > right) {
+        endIdx = Math.min(allPoints.length - 1, i + 1);
+        break;
+      }
     }
     const points = allPoints.slice(startIdx, endIdx + 1);
 
@@ -597,7 +616,8 @@ export class Game {
       grad.addColorStop(1, "#0f1124");
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
-      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+      for (let i = 1; i < points.length; i++)
+        ctx.lineTo(points[i].x, points[i].y);
       ctx.lineTo(points[points.length - 1].x, CONFIG.SCENE_HEIGHT);
       ctx.lineTo(points[0].x, CONFIG.SCENE_HEIGHT);
       ctx.closePath();
@@ -608,7 +628,8 @@ export class Game {
       ctx.lineWidth = 5;
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
-      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+      for (let i = 1; i < points.length; i++)
+        ctx.lineTo(points[i].x, points[i].y);
       ctx.stroke();
     }
 
@@ -939,8 +960,7 @@ export class Game {
         this.largeBall.omega +=
           ((CONFIG.LARGE_CATCHUP_ACCELERATION * boostFactor * dt) /
             this.largeBall.radius) *
-          this.largeBallSpeedScale *
-          this.allBallsSpeedScale;
+          this.largeBallSpeedScale;
       }
     }
 
@@ -1187,7 +1207,7 @@ export class Game {
     // Self-propulsion: spin drive torque (the "bicycle engine")
     const speedScale =
       ball.type === "large"
-        ? this.largeBallSpeedScale * this.allBallsSpeedScale
+        ? this.largeBallSpeedScale
         : this.allBallsSpeedScale;
     const spinDrive =
       ball.type === "large"
@@ -1446,9 +1466,7 @@ export class Game {
     d["diag-segments"].textContent = `${segmentsSeen} / ${this.terrainChunks}`;
     d["diag-vx"].textContent = Math.round(this.largeBall.vx);
     d["diag-vy"].textContent = Math.round(this.largeBall.vy);
-    d["diag-speed"].textContent = (
-      this.largeBallSpeedScale * this.allBallsSpeedScale
-    ).toFixed(2);
+    d["diag-speed"].textContent = this.largeBallSpeedScale.toFixed(2);
     d["diag-time"].textContent = `${this.timeScale}×`;
     d["diag-p"].textContent = this.largeBallPaused ? "paused" : "running";
     d["diag-o"].textContent = this.allBallsPaused ? "paused" : "running";

@@ -94,6 +94,32 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // ── Physics sub-tabs ────────────────────────────────────────────────────────
+  const physicsTabs = document.querySelectorAll(".physics-tab");
+  const physicsPanels = document.querySelectorAll(".physics-panel");
+  physicsTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      physicsTabs.forEach((t) => t.classList.remove("physics-tab--active"));
+      physicsPanels.forEach((p) => p.classList.remove("physics-panel--active"));
+      tab.classList.add("physics-tab--active");
+      document.getElementById(`physics-${tab.dataset.physics}`).classList.add("physics-panel--active");
+    });
+  });
+
+  // ── Physics option buttons ───────────────────────────────────────────────────
+  const physicsBtns = document.querySelectorAll(".physics-btn");
+  physicsBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.classList.contains("physics-btn--selected")) return;
+      const key = btn.dataset.config;
+      physicsBtns.forEach((b) => {
+        if (b.dataset.config === key) b.classList.remove("physics-btn--selected");
+      });
+      btn.classList.add("physics-btn--selected");
+      game.setConfig(key, parseFloat(btn.dataset.value));
+    });
+  });
+
   document.getElementById("start-btn").addEventListener("click", () => {
     game.begin(selectedDuration, selectedTiebreaker, selectedSmoothness);
   });
