@@ -124,6 +124,8 @@ so balls will still differ from each other. */
   HEALTH_PICKUP_HEAL: 0.5, // Fraction of missing health restored on collection
   HEALTH_PICKUP_LOOKAHEAD: 2000, // How far ahead of current camera to place the pickup (px)
   HEALTH_PICKUP_MIN_CLEARANCE: 40, // Minimum px above the terrain surface
+  PICKUP_MODE: "interval",  // "interval" | "random" | "total"
+  PICKUP_VALUE: 5,          // seconds for interval/random modes; count for total mode
 
   // ─── Terrain generation ───────────────────────────────────────────────────
   TERRAIN_CHUNKS: 750, // Not used at runtime — chunk count is auto-calculated as 10 segments/sec of game duration
@@ -444,6 +446,7 @@ export class Game {
 
     this.healthPickups = [];
     this._lastPickupSpawnMs = 0;
+    this._nextPickupMs = this._scheduleNextPickup(0);
     this.backWallRightX = 0;
     this.backWallFlash = 0;
     this.shakeAmplitude = 0;
@@ -535,6 +538,10 @@ export class Game {
 
   setConfig(key, value) {
     CONFIG[key] = value;
+  }
+
+  getConfig(key) {
+    return CONFIG[key];
   }
 
   showStartScreen() {
@@ -1309,30 +1316,50 @@ export class Game {
     }
   }
 
+  _scheduleNextPickup(fromMs) {
+    const v = CONFIG.PICKUP_VALUE;
+    if (CONFIG.PICKUP_MODE === "interval") {
+      return fromMs + v * 1000;
+    } else if (CONFIG.PICKUP_MODE === "random") {
+      const minMs = 10 * 1000;
+      const maxMs = v * 1000;
+      const rangeMs = Math.max(maxMs - minMs, 0);
+      return fromMs + minMs + Math.random() * rangeMs;
+    } else {
+      // total mode handled inline
+      const slotMs = v > 0 ? this.gameDurationMs / v : Infinity;
+      return fromMs + slotMs;
+    }
+  }
+
   updateHealthPickups() {
     if (this.gameOver) return;
 
-    // Spawn a new pickup every HEALTH_PICKUP_INTERVAL_MS of elapsed game time
-    if (
-      this.elapsedMs - this._lastPickupSpawnMs >=
-        CONFIG.HEALTH_PICKUP_INTERVAL_MS &&
-      !this.finishActive
-    ) {
-      this._lastPickupSpawnMs = this.elapsedMs;
-      const r = CONFIG.HEALTH_PICKUP_RADIUS;
-      // Place it ahead of the camera so it floats into view naturally
-      const spawnX = clamp(
-        this.cameraX + CONFIG.HEALTH_PICKUP_LOOKAHEAD,
-        r,
-        this.sceneWidth - r,
-      );
-      const groundY = this.terrain.getY(spawnX);
-      // Random y between top clearance and terrain surface minus clearance
-      const minY = r + 40;
-      const maxY = groundY - CONFIG.HEALTH_PICKUP_MIN_CLEARANCE - r;
-      const spawnY =
-        minY < maxY ? minY + Math.random() * (maxY - minY) : (minY + maxY) / 2;
-      this.healthPickups.push({ x: spawnX, y: spawnY, r, age: 0 });
+    // Determine whether to spawn a pickup this frame
+    if (!this.finishActive) {
+      const mode = CONFIG.PICKUP_MODE;
+      const shouldSpawn = this.elapsedMs >= this._nextPickupMs;
+
+      if (shouldSpawn) {
+        // total mode advances from the scheduled time to preserve even spacing;
+        // interval/random advance from now so late spawns don't bunch up
+        this._nextPickupMs = mode === "total"
+          ? this._scheduleNextPickup(this._nextPickupMs)
+          : this._scheduleNextPickup(this.elapsedMs);
+        this._lastPickupSpawnMs = this.elapsedMs;
+        const r = CONFIG.HEALTH_PICKUP_RADIUS;
+        const spawnX = clamp(
+          this.cameraX + CONFIG.HEALTH_PICKUP_LOOKAHEAD,
+          r,
+          this.sceneWidth - r,
+        );
+        const groundY = this.terrain.getY(spawnX);
+        const minY = r + 40;
+        const maxY = groundY - CONFIG.HEALTH_PICKUP_MIN_CLEARANCE - r;
+        const spawnY =
+          minY < maxY ? minY + Math.random() * (maxY - minY) : (minY + maxY) / 2;
+        this.healthPickups.push({ x: spawnX, y: spawnY, r, age: 0 });
+      }
     }
 
     // Tick age (for pulse animation) and test marble collisions

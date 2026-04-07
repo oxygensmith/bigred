@@ -279,6 +279,94 @@
   }
 }
 
+// ── Gameplay sub-tabs ─────────────────────────────────────────────────────────
+
+#panel-gameplay {
+  flex-direction: row !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 0 !important;
+  padding-top: 20px !important;
+}
+
+.gameplay-tabs {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 110px;
+  padding-right: 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  align-self: stretch;
+}
+
+.gameplay-tab {
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  border-right: 2px solid transparent;
+  margin-right: -1px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.12s, border-color 0.12s;
+
+  &:hover { color: var(--text); }
+
+  &.gameplay-tab--active {
+    color: var(--text);
+    border-right-color: rgba(255, 255, 255, 0.35);
+  }
+}
+
+.gameplay-panels {
+  flex: 1;
+  min-height: 0;
+  padding-left: 20px;
+  display: flex;
+  align-items: stretch;
+}
+
+.gameplay-panel {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+  flex: 1;
+  position: relative;
+  padding-top: 28px;
+
+  &.gameplay-panel--active {
+    display: flex;
+  }
+}
+
+.gameplay-panel__title {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+#panel-gameplay .option-set {
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+#panel-gameplay .start-overlay__label {
+  font-size: 0.78rem;
+  margin-bottom: 8px;
+}
+
 // ── Physics sub-tabs ──────────────────────────────────────────────────────────
 
 // The physics panel uses a left-sidebar layout: sub-tab list on the left,
@@ -502,6 +590,55 @@
   &.tiebreaker-btn--selected {
     background: rgba(232, 73, 63, 0.18);
     border-color: var(--red);
+    color: var(--text);
+  }
+}
+
+.pickup-label {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 10px;
+
+  span { color: var(--muted); }
+  #pickup-value-display {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text);
+    min-width: 2ch;
+    text-align: center;
+  }
+}
+
+.pickup-slider {
+  width: 100%;
+  max-width: 260px;
+  margin-bottom: 12px;
+  accent-color: var(--red);
+}
+
+.pickup-mode-btn {
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--text);
+  }
+
+  &.pickup-mode-btn--selected {
+    background: rgba(232, 73, 63, 0.18);
+    border-color: rgba(232, 73, 63, 0.5);
     color: var(--text);
   }
 }

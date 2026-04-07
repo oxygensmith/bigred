@@ -95,6 +95,18 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // ── Gameplay sub-tabs ───────────────────────────────────────────────────────
+  const gameplayTabs = document.querySelectorAll(".gameplay-tab");
+  const gameplayPanels = document.querySelectorAll(".gameplay-panel");
+  gameplayTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      gameplayTabs.forEach((t) => t.classList.remove("gameplay-tab--active"));
+      gameplayPanels.forEach((p) => p.classList.remove("gameplay-panel--active"));
+      tab.classList.add("gameplay-tab--active");
+      document.getElementById(`gameplay-${tab.dataset.gameplay}`).classList.add("gameplay-panel--active");
+    });
+  });
+
   // ── Physics sub-tabs ────────────────────────────────────────────────────────
   const physicsTabs = document.querySelectorAll(".physics-tab");
   const physicsPanels = document.querySelectorAll(".physics-panel");
@@ -119,6 +131,44 @@ window.addEventListener("DOMContentLoaded", () => {
       btn.classList.add("physics-btn--selected");
       const raw = btn.dataset.value;
       game.setConfig(key, isNaN(Number(raw)) ? raw : parseFloat(raw));
+    });
+  });
+
+  // ── Health pickup controls ────────────────────────────────────────────────
+  const pickupSlider = document.getElementById("pickup-slider");
+  const pickupPrefix = document.getElementById("pickup-prefix");
+  const pickupSuffix = document.getElementById("pickup-suffix");
+  const pickupValueDisplay = document.getElementById("pickup-value-display");
+  const pickupModeBtns = document.querySelectorAll(".pickup-mode-btn");
+
+  const pickupLabels = {
+    interval: { prefix: "every", suffix: "seconds" },
+    random:   { prefix: "between 10 and", suffix: "seconds" },
+    total:    { prefix: "total", suffix: "pickups per game" },
+  };
+
+  function updatePickupUI() {
+    const mode = game.getConfig("PICKUP_MODE");
+    let val = parseInt(pickupSlider.value, 10);
+    if (mode === "random" && val < 11) {
+      val = 11;
+      pickupSlider.value = 11;
+    }
+    pickupValueDisplay.textContent = val;
+    pickupPrefix.textContent = pickupLabels[mode].prefix;
+    pickupSuffix.textContent = pickupLabels[mode].suffix;
+    game.setConfig("PICKUP_VALUE", val);
+  }
+
+  pickupSlider.addEventListener("input", updatePickupUI);
+
+  pickupModeBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.classList.contains("pickup-mode-btn--selected")) return;
+      pickupModeBtns.forEach((b) => b.classList.remove("pickup-mode-btn--selected"));
+      btn.classList.add("pickup-mode-btn--selected");
+      game.setConfig("PICKUP_MODE", btn.dataset.mode);
+      updatePickupUI();
     });
   });
 

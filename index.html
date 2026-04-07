@@ -175,34 +175,59 @@
         </div>
 
         <div class="start-panel" id="panel-gameplay">
-          <div class="option-set">
-            <p class="start-overlay__label">
-              Most survivors = winning team.<br />Choose the tiebreaker:
-            </p>
-            <div class="duration-picker tiebreaker-picker">
-              <button
-                class="tiebreaker-btn tiebreaker-btn--selected"
-                data-tb="health"
-              >
-                Highest Team total health
-              </button>
-              <button class="tiebreaker-btn" data-tb="speed">
-                Fastest Team through gate
-              </button>
-            </div>
+          <div class="gameplay-tabs">
+            <button class="gameplay-tab gameplay-tab--active" data-gameplay="tiebreaker">Tiebreakers</button>
+            <button class="gameplay-tab" data-gameplay="pickups">Health Pickups</button>
+            <button class="gameplay-tab" data-gameplay="seed">Game Seed</button>
           </div>
-          <div class="option-set">
-            <p class="start-overlay__label">Game seed</p>
-            <input
-              id="seed-input"
-              class="seed-input"
-              type="text"
-              inputmode="numeric"
-              maxlength="10"
-              placeholder="Random"
-              autocomplete="off"
-              spellcheck="false"
-            />
+          <div class="gameplay-panels">
+
+            <div class="gameplay-panel gameplay-panel--active" id="gameplay-tiebreaker">
+              <p class="gameplay-panel__title">Tiebreakers</p>
+              <div class="option-set">
+                <p class="start-overlay__label">Most survivors = winning team.<br />Choose the tiebreaker:</p>
+                <div class="duration-picker tiebreaker-picker">
+                  <button class="tiebreaker-btn tiebreaker-btn--selected" data-tb="health">Highest Team total health</button>
+                  <button class="tiebreaker-btn" data-tb="speed">Fastest Team through gate</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="gameplay-panel" id="gameplay-pickups">
+              <p class="gameplay-panel__title">Health Pickups</p>
+              <div class="option-set">
+                <p class="start-overlay__label">Health pickups appear</p>
+                <div class="pickup-label">
+                  <span id="pickup-prefix">every</span>
+                  <span id="pickup-value-display">5</span>
+                  <span id="pickup-suffix">seconds</span>
+                </div>
+                <input id="pickup-slider" class="pickup-slider" type="range" min="1" max="60" value="5" />
+                <div class="duration-picker">
+                  <button class="pickup-mode-btn pickup-mode-btn--selected" data-mode="interval">Every N seconds</button>
+                  <button class="pickup-mode-btn" data-mode="random">Up to N seconds</button>
+                  <button class="pickup-mode-btn" data-mode="total">Total pickups</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="gameplay-panel" id="gameplay-seed">
+              <p class="gameplay-panel__title">Game Seed</p>
+              <div class="option-set">
+                <p class="start-overlay__label">Enter a seed to replay a game</p>
+                <input
+                  id="seed-input"
+                  class="seed-input"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="10"
+                  placeholder="Random"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+              </div>
+            </div>
+
           </div>
         </div>
 
