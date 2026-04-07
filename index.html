@@ -133,6 +133,7 @@
         </button>
         <button class="start-tab" data-panel="landscape">Landscape</button>
         <button class="start-tab" data-panel="gameplay">Gameplay</button>
+        <button class="start-tab" data-panel="bigred">Big Red</button>
         <button class="start-tab" data-panel="physics">Physics</button>
       </div>
 
@@ -190,7 +191,41 @@
               </button>
             </div>
           </div>
+          <div class="option-set">
+            <p class="start-overlay__label">Game seed</p>
+            <input
+              id="seed-input"
+              class="seed-input"
+              type="text"
+              inputmode="numeric"
+              maxlength="10"
+              placeholder="Random"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
         </div>
+
+        <div class="start-panel" id="panel-bigred">
+          <div class="option-set">
+            <p class="start-overlay__label">Big Red damage multiplier</p>
+            <div class="duration-picker">
+              <button class="physics-btn" data-config="DAMAGE_MULTIPLIER" data-value="0.5">0.5×</button>
+              <button class="physics-btn physics-btn--selected" data-config="DAMAGE_MULTIPLIER" data-value="1">1×</button>
+              <button class="physics-btn" data-config="DAMAGE_MULTIPLIER" data-value="2">2×</button>
+              <button class="physics-btn" data-config="DAMAGE_MULTIPLIER" data-value="3">3×</button>
+            </div>
+          </div>
+          <div class="option-set">
+            <p class="start-overlay__label">Big Red grows with each marble kill</p>
+            <div class="duration-picker">
+              <button class="physics-btn" data-config="SIZE_GAIN_MODE" data-value="none">No</button>
+              <button class="physics-btn physics-btn--selected" data-config="SIZE_GAIN_MODE" data-value="little">A Little</button>
+              <button class="physics-btn" data-config="SIZE_GAIN_MODE" data-value="lots">Lots</button>
+            </div>
+          </div>
+        </div>
+
         <div class="start-panel" id="panel-physics">
           <div class="physics-tabs">
             <button
@@ -349,38 +384,11 @@
               </div>
 
               <div class="option-set">
-                <p class="start-overlay__label">
-                  Big Red gains killed marbles'
-                </p>
+                <p class="start-overlay__label">Big Red gains mass with each marble kill</p>
                 <div class="duration-picker">
-                  <button
-                    class="physics-btn physics-btn--selected"
-                    data-config="ABSORB_MODE"
-                    data-value="size"
-                  >
-                    Size
-                  </button>
-                  <button
-                    class="physics-btn"
-                    data-config="ABSORB_MODE"
-                    data-value="mass"
-                  >
-                    Mass
-                  </button>
-                  <button
-                    class="physics-btn"
-                    data-config="ABSORB_MODE"
-                    data-value="both"
-                  >
-                    Size + Mass
-                  </button>
-                  <button
-                    class="physics-btn"
-                    data-config="ABSORB_MODE"
-                    data-value="neither"
-                  >
-                    Neither
-                  </button>
+                  <button class="physics-btn physics-btn--selected" data-config="MASS_GAIN_MODE" data-value="none">No</button>
+                  <button class="physics-btn" data-config="MASS_GAIN_MODE" data-value="little">A Little</button>
+                  <button class="physics-btn" data-config="MASS_GAIN_MODE" data-value="lots">Lots</button>
                 </div>
               </div>
 
@@ -420,6 +428,7 @@
                 <th>Duration</th>
                 <th>Landscape</th>
                 <th>Tiebreaker</th>
+                <th class="leaderboard-seed-header" title="Game seed">🥚</th>
               </tr>
             </thead>
             <tbody id="leaderboard-body"></tbody>

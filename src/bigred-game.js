@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.17";
+export const VERSION = "1.2.2";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -105,13 +105,15 @@ so balls will still differ from each other. */
      12 — (default) Big Red rolls through with authority, small balls scatter
      20+ — Big Red is essentially immovable; feels more like a wall than a ball */
   DAMAGE_MODE: "friction", // "friction" | "impulse" | "hybrid"
+  DAMAGE_MULTIPLIER: 1.0, // Global damage scalar applied to all modes
   DAMAGE_PER_SECOND: 24, // HP/s drained during contact (friction + hybrid)
   DAMAGE_IMPULSE_SCALE: 0.08, // HP per px/s of relVel per impulse hit (impulse + hybrid)
   DAMAGE_IMPULSE_COOLDOWN: 0.35, // Seconds between impulse damage hits per marble
-  LARGE_BALL_GROWTH_PER_KILL: 5, // Flat px added to radius per kill. Set 0 to disable.
+  SIZE_GAIN_MODE: "little", // "none" | "little" | "lots" — Big Red radius growth per kill
+  LARGE_BALL_GROWTH_PER_KILL: 5, // Flat px per kill at "little" (doubled for "lots")
   LARGE_BALL_GROWTH_SPEED: 10, // How fast radius lerps to its target size (higher = faster growth animation)
-  ABSORB_MODE: "size", // "size" | "mass" | "both" | "neither"
-  MASS_GAIN_PER_KILL: 2, // Mass ratio points added per kill in "mass" and "both" modes
+  MASS_GAIN_MODE: "none", // "none" | "little" | "lots" — Big Red mass ratio growth per kill
+  MASS_GAIN_PER_KILL: 2, // Mass ratio points per kill at "little" (doubled for "lots")
 
   // ─── Audio ────────────────────────────────────────────────────────────────
   USE_SAMPLED_AUDIO: 0, // 0 = synthesized fallback sounds only; 1 = load base64 samples from sounds.js
@@ -336,8 +338,11 @@ export class Game {
   }
 
   reset() {
-    // New seed each game — shown in diagnostics so a run is fully reproducible
-    this.seed = Math.floor(Math.random() * 0xffffffff);
+    // Use a forced seed if provided, otherwise generate a random one
+    this.seed =
+      this.forceSeed !== null && this.forceSeed !== undefined
+        ? this.forceSeed
+        : Math.floor(Math.random() * 0xffffffff);
     const rng = mulberry32(this.seed);
 
     this.terrainChunks = Math.round((this.gameDurationMs / 1000) * 10);
@@ -657,13 +662,14 @@ export class Game {
     this.showStartScreen();
   }
 
-  begin(durationMs, tiebreaker, landscapeSmoothness) {
+  begin(durationMs, tiebreaker, landscapeSmoothness, forceSeed = null) {
     this.stopDemo();
     this.audio.reset();
     this.audio.init(CONFIG.USE_SAMPLED_AUDIO);
     this.gameDurationMs = durationMs;
     this.tiebreaker = tiebreaker;
     this.landscapeSmoothness = landscapeSmoothness;
+    this.forceSeed = forceSeed;
     CONFIG.LANDSCAPE_SMOOTHNESS = landscapeSmoothness;
     this.ui.startOverlay.classList.add("start-overlay--hidden");
     this.ui.scoreboard.classList.remove("scoreboard--hidden");
@@ -740,9 +746,15 @@ export class Game {
     const winType =
       this.tiebreaker === "health" ? "Highest health" : "Fastest team";
 
-    const row = [VERSION, winner, duration, landscape, winType, color].join(
-      ", ",
-    );
+    const row = [
+      VERSION,
+      winner,
+      duration,
+      landscape,
+      winType,
+      color,
+      this.seed,
+    ].join(", ");
 
     const stored = localStorage.getItem("bigred_results") ?? "";
     localStorage.setItem("bigred_results", stored ? `${stored}\n${row}` : row);
@@ -782,22 +794,43 @@ export class Game {
 
     // ── Table ──
     if (rows.length === 0) {
-      this.ui.leaderboardBody.innerHTML = `<tr><td colspan="5" class="leaderboard-table__empty">No results yet</td></tr>`;
+      this.ui.leaderboardBody.innerHTML = `<tr><td colspan="6" class="leaderboard-table__empty">No results yet</td></tr>`;
     } else {
       this.ui.leaderboardBody.innerHTML = rows
         .map((row, i) => {
-          const [, winner, duration, landscape, winType, color] =
+          const [, winner, duration, landscape, winType, color, seed] =
             row.split(", ");
           const c = color ?? (winner === "Big Red" ? "#e8493f" : "#ffffff");
+          const seedCell = seed
+            ? `<td class="leaderboard-seed-cell"><span class="leaderboard-seed-icon" data-seed="${seed}" title="${seed}">🥚</span></td>`
+            : `<td></td>`;
           return `<tr style="color:${c};--row-color:${c}">
             <td>${i + 1}</td>
             <td>${winner}</td>
             <td>${duration}</td>
             <td>${landscape}</td>
             <td>${winType}</td>
+            ${seedCell}
           </tr>`;
         })
         .join("");
+
+      // Click-to-copy seed
+      this.ui.leaderboardBody
+        .querySelectorAll(".leaderboard-seed-icon")
+        .forEach((el) => {
+          el.addEventListener("click", () => {
+            navigator.clipboard.writeText(el.dataset.seed).then(() => {
+              const orig = el.title;
+              el.title = "Copied!";
+              el.classList.add("leaderboard-seed-icon--copied");
+              setTimeout(() => {
+                el.title = orig;
+                el.classList.remove("leaderboard-seed-icon--copied");
+              }, 1500);
+            });
+          });
+        });
     }
 
     this.ui.leaderboardOverlay.classList.remove("leaderboard-overlay--hidden");
@@ -1405,22 +1438,23 @@ export class Game {
         small.healGlow = 0;
 
         // ── Damage ────────────────────────────────────────────────────────────
+        const dmgMul = CONFIG.DAMAGE_MULTIPLIER;
         if (CONFIG.DAMAGE_MODE === "friction") {
-          small.health -= CONFIG.DAMAGE_PER_SECOND * dt;
+          small.health -= CONFIG.DAMAGE_PER_SECOND * dmgMul * dt;
         } else if (CONFIG.DAMAGE_MODE === "impulse") {
           // Damage only fires when hitCooldown has expired and Big Red is
           // genuinely approaching — prevents 60fps re-triggering on sustained contact
           if (small.hitCooldown <= 0 && relVel > 0) {
             small.hitCooldown = CONFIG.DAMAGE_IMPULSE_COOLDOWN;
-            small.health -= relVel * CONFIG.DAMAGE_IMPULSE_SCALE;
+            small.health -= relVel * CONFIG.DAMAGE_IMPULSE_SCALE * dmgMul;
           }
         } else {
           // hybrid — impulse spike when cooldown clears + continuous friction drain
           if (small.hitCooldown <= 0 && relVel > 0) {
             small.hitCooldown = CONFIG.DAMAGE_IMPULSE_COOLDOWN;
-            small.health -= relVel * CONFIG.DAMAGE_IMPULSE_SCALE;
+            small.health -= relVel * CONFIG.DAMAGE_IMPULSE_SCALE * dmgMul;
           }
-          small.health -= CONFIG.DAMAGE_PER_SECOND * dt;
+          small.health -= CONFIG.DAMAGE_PER_SECOND * dmgMul * dt;
         }
 
         if (small.health <= 0) {
@@ -1430,11 +1464,16 @@ export class Game {
           small.vx = 0;
           small.vy = 0;
           this.killCount++;
-          if (CONFIG.ABSORB_MODE === "size" || CONFIG.ABSORB_MODE === "both") {
+          if (CONFIG.SIZE_GAIN_MODE === "little") {
             this.largeBall.targetRadius += CONFIG.LARGE_BALL_GROWTH_PER_KILL;
+          } else if (CONFIG.SIZE_GAIN_MODE === "lots") {
+            this.largeBall.targetRadius +=
+              CONFIG.LARGE_BALL_GROWTH_PER_KILL * 2;
           }
-          if (CONFIG.ABSORB_MODE === "mass" || CONFIG.ABSORB_MODE === "both") {
+          if (CONFIG.MASS_GAIN_MODE === "little") {
             this.largeBall.massRatioBonus += CONFIG.MASS_GAIN_PER_KILL;
+          } else if (CONFIG.MASS_GAIN_MODE === "lots") {
+            this.largeBall.massRatioBonus += CONFIG.MASS_GAIN_PER_KILL * 2;
           }
           for (let i = 0; i < 16; i++) {
             const angle = (i / 16) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;

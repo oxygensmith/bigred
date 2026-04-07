@@ -122,8 +122,18 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  const seedInput = document.getElementById("seed-input");
+
+  // Only allow digits in the seed field
+  seedInput.addEventListener("input", () => {
+    seedInput.value = seedInput.value.replace(/\D/g, "").slice(0, 10);
+  });
+
   document.getElementById("start-btn").addEventListener("click", () => {
-    game.begin(selectedDuration, selectedTiebreaker, selectedSmoothness);
+    const rawSeed = seedInput.value.trim();
+    const forceSeed = rawSeed ? Math.min(parseInt(rawSeed, 10), 0xffffffff) : null;
+    game.begin(selectedDuration, selectedTiebreaker, selectedSmoothness, forceSeed);
+    seedInput.value = "";
   });
 
   document.getElementById("resume-btn").addEventListener("click", () => {
