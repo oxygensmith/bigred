@@ -216,8 +216,16 @@
   flex-shrink: 0;
 }
 
+.option-set {
+  display: flex;
+  flex-flow: column;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
 .start-overlay__label {
-  margin: 0 0 16px;
+  margin: 0 0 12px 0;
   font-size: 1rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -282,9 +290,13 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   cursor: pointer;
-  transition: color 0.12s, border-color 0.12s;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
 
-  &:hover { color: var(--text); }
+  &:hover {
+    color: var(--text);
+  }
 
   &.physics-tab--active {
     color: var(--text);
@@ -319,7 +331,10 @@
   font-size: 1rem;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
 
   &:hover {
     background: rgba(255, 255, 255, 0.09);

@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.12";
+export const VERSION = "1.2.14";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -104,7 +104,10 @@ so balls will still differ from each other. */
      6 — noticeable, but Big Red still wobbles a bit on direct hits
      12 — (default) Big Red rolls through with authority, small balls scatter
      20+ — Big Red is essentially immovable; feels more like a wall than a ball */
-  DAMAGE_PER_SECOND: 24, // HP/s drained from a small ball while touching Big Red
+  DAMAGE_MODE: "friction", // "friction" | "impulse" | "hybrid"
+  DAMAGE_PER_SECOND: 24, // HP/s drained during contact (friction + hybrid)
+  DAMAGE_IMPULSE_SCALE: 0.08, // HP per px/s of relVel per impulse hit (impulse + hybrid)
+  DAMAGE_IMPULSE_COOLDOWN: 0.35, // Seconds between impulse damage hits per marble
   LARGE_BALL_GROWTH_PER_KILL: 3, // Flat px added to radius per kill. Set 0 to disable.
   LARGE_BALL_GROWTH_SPEED: 3, // How fast radius lerps to its target size (higher = faster growth animation)
 
@@ -426,6 +429,7 @@ export class Game {
           hitCooldown: 0,
           healGlow: 0,
           stuck: false,
+          wasOverlapping: false,
         };
       },
     );
@@ -1345,7 +1349,7 @@ export class Game {
         const normalY = dy / (distance || 1);
         const overlap = minDist - distance;
         const massRatio = CONFIG.LARGE_BALL_MASS_RATIO;
-        const smallShare = massRatio / (massRatio + 1); // fraction of overlap pushed onto small ball
+        const smallShare = massRatio / (massRatio + 1);
         small.x += normalX * overlap * smallShare;
         small.y += normalY * overlap * smallShare;
         this.largeBall.x -= normalX * overlap * (1 - smallShare);
@@ -1362,22 +1366,21 @@ export class Game {
           small.vy += impulse * smallShare * normalY;
         }
 
-        // Spin transfer: Big Red rotates clockwise (omega = vx / radius).
-        // Surface velocity at contact point = omega * R * (-normalY, normalX).
-        // omega * R simplifies to vx, so the tangential kick scales directly with Big Red's speed.
+        /* Spin transfer: Big Red rotates clockwise (omega = vx / radius).
+         Surface velocity at contact point = omega * R * (-normalY, normalX).
+         omega * R simplifies to vx, so the tangential kick scales directly with Big Red's speed. */
         const spinImpulse = this.largeBall.vx * CONFIG.SPIN_TRANSFER;
         small.vx += spinImpulse * -normalY;
         small.vy += spinImpulse * normalX;
-        // Also spin up the small ball — tangential impulse becomes angular momentum
         small.omega += spinImpulse / small.radius;
 
-        // Hit particles — spray in the direction away from Big Red, rate-limited
+        // Particles + audio — rate-limited by hitCooldown
         if (small.hitCooldown <= 0 && relVel > 20) {
           small.hitCooldown = 0.12;
           this.audio.playBallStruck();
           const baseAngle = Math.atan2(normalY, normalX);
-          const spread = Math.PI * 0.4; // ±36° cone
-          const count = 4 + Math.floor(Math.random() * 3); // 4–6 particles
+          const spread = Math.PI * 0.4;
+          const count = 4 + Math.floor(Math.random() * 3);
           for (let i = 0; i < count; i++) {
             const angle = baseAngle + (Math.random() - 0.5) * spread;
             const speed = 80 + Math.random() * 120;
@@ -1394,7 +1397,26 @@ export class Game {
         }
 
         small.healGlow = 0;
-        small.health -= CONFIG.DAMAGE_PER_SECOND * dt;
+
+        // ── Damage ────────────────────────────────────────────────────────────
+        if (CONFIG.DAMAGE_MODE === "friction") {
+          small.health -= CONFIG.DAMAGE_PER_SECOND * dt;
+        } else if (CONFIG.DAMAGE_MODE === "impulse") {
+          // Damage only fires when hitCooldown has expired and Big Red is
+          // genuinely approaching — prevents 60fps re-triggering on sustained contact
+          if (small.hitCooldown <= 0 && relVel > 0) {
+            small.hitCooldown = CONFIG.DAMAGE_IMPULSE_COOLDOWN;
+            small.health -= relVel * CONFIG.DAMAGE_IMPULSE_SCALE;
+          }
+        } else {
+          // hybrid — impulse spike when cooldown clears + continuous friction drain
+          if (small.hitCooldown <= 0 && relVel > 0) {
+            small.hitCooldown = CONFIG.DAMAGE_IMPULSE_COOLDOWN;
+            small.health -= relVel * CONFIG.DAMAGE_IMPULSE_SCALE;
+          }
+          small.health -= CONFIG.DAMAGE_PER_SECOND * dt;
+        }
+
         if (small.health <= 0) {
           small.health = 0;
           small.alive = false;

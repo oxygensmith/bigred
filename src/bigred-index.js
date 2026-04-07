@@ -116,7 +116,8 @@ window.addEventListener("DOMContentLoaded", () => {
         if (b.dataset.config === key) b.classList.remove("physics-btn--selected");
       });
       btn.classList.add("physics-btn--selected");
-      game.setConfig(key, parseFloat(btn.dataset.value));
+      const raw = btn.dataset.value;
+      game.setConfig(key, isNaN(Number(raw)) ? raw : parseFloat(raw));
     });
   });
 

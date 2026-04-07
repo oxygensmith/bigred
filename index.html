@@ -139,48 +139,56 @@
       <div class="start-panels">
         <div class="start-panel start-panel--active" id="panel-length">
           <p class="start-overlay__label">Length of game</p>
-          <div class="duration-picker">
-            <button class="duration-btn" data-ms="120000">2 min</button>
-            <button class="duration-btn" data-ms="180000">3 min</button>
-            <button
-              class="duration-btn duration-btn--selected"
-              data-ms="300000"
-            >
-              5 min
-            </button>
-            <button class="duration-btn" data-ms="600000">10 min</button>
-            <button class="duration-btn" data-ms="1200000">20 min</button>
+          <div class="option-set">
+            <div class="duration-picker">
+              <button class="duration-btn" data-ms="120000">2 min</button>
+              <button class="duration-btn" data-ms="180000">3 min</button>
+              <button
+                class="duration-btn duration-btn--selected"
+                data-ms="300000"
+              >
+                5 min
+              </button>
+              <button class="duration-btn" data-ms="600000">10 min</button>
+              <button class="duration-btn" data-ms="1200000">20 min</button>
+            </div>
           </div>
         </div>
 
         <div class="start-panel" id="panel-landscape">
           <p class="start-overlay__label">Landscape</p>
-          <div class="duration-picker">
-            <button class="landscape-btn" data-smoothness="36">Rocky</button>
-            <button
-              class="landscape-btn landscape-btn--selected"
-              data-smoothness="80"
-            >
-              Average
-            </button>
-            <button class="landscape-btn" data-smoothness="180">Gentle</button>
+          <div class="option-set">
+            <div class="duration-picker">
+              <button class="landscape-btn" data-smoothness="36">Rocky</button>
+              <button
+                class="landscape-btn landscape-btn--selected"
+                data-smoothness="80"
+              >
+                Average
+              </button>
+              <button class="landscape-btn" data-smoothness="180">
+                Gentle
+              </button>
+            </div>
           </div>
         </div>
 
         <div class="start-panel" id="panel-gameplay">
-          <p class="start-overlay__label">
-            Most survivors = winning team.<br />Choose the tiebreaker:
-          </p>
-          <div class="duration-picker tiebreaker-picker">
-            <button
-              class="tiebreaker-btn tiebreaker-btn--selected"
-              data-tb="health"
-            >
-              Highest Team total health
-            </button>
-            <button class="tiebreaker-btn" data-tb="speed">
-              Fastest Team through gate
-            </button>
+          <div class="option-set">
+            <p class="start-overlay__label">
+              Most survivors = winning team.<br />Choose the tiebreaker:
+            </p>
+            <div class="duration-picker tiebreaker-picker">
+              <button
+                class="tiebreaker-btn tiebreaker-btn--selected"
+                data-tb="health"
+              >
+                Highest Team total health
+              </button>
+              <button class="tiebreaker-btn" data-tb="speed">
+                Fastest Team through gate
+              </button>
+            </div>
           </div>
         </div>
         <div class="start-panel" id="panel-physics">
@@ -200,118 +208,178 @@
               class="physics-panel physics-panel--active"
               id="physics-gravity"
             >
-              <p class="start-overlay__label">
-                Gravitational pull on Big Red + Marbles
-              </p>
-              <div class="duration-picker">
-                <button
-                  class="physics-btn"
-                  data-config="GRAVITY"
-                  data-value="180"
-                >
-                  Low
-                </button>
-                <button
-                  class="physics-btn physics-btn--selected"
-                  data-config="GRAVITY"
-                  data-value="360"
-                >
-                  Normal
-                </button>
-                <button
-                  class="physics-btn"
-                  data-config="GRAVITY"
-                  data-value="720"
-                >
-                  High
-                </button>
+              <div class="option-set">
+                <p class="start-overlay__label">
+                  Gravitational pull on Big Red + Marbles
+                </p>
+                <div class="duration-picker">
+                  <button
+                    class="physics-btn"
+                    data-config="GRAVITY"
+                    data-value="180"
+                  >
+                    Low
+                  </button>
+                  <button
+                    class="physics-btn physics-btn--selected"
+                    data-config="GRAVITY"
+                    data-value="360"
+                  >
+                    Normal
+                  </button>
+                  <button
+                    class="physics-btn"
+                    data-config="GRAVITY"
+                    data-value="720"
+                  >
+                    High
+                  </button>
+                </div>
               </div>
             </div>
 
             <div class="physics-panel" id="physics-bounce">
-              <p class="start-overlay__label">
-                How much Big Red + Marbles bounce off the ground
-              </p>
-              <div class="duration-picker">
-                <button
-                  class="physics-btn"
-                  data-config="GROUND_BOUNCE_SMALL"
-                  data-value="0.45"
-                >
-                  Low
-                </button>
-                <button
-                  class="physics-btn physics-btn--selected"
-                  data-config="GROUND_BOUNCE_SMALL"
-                  data-value="0.78"
-                >
-                  Normal
-                </button>
-                <button
-                  class="physics-btn"
-                  data-config="GROUND_BOUNCE_SMALL"
-                  data-value="0.95"
-                >
-                  High
-                </button>
+              <div class="option-set">
+                <p class="start-overlay__label">
+                  How much Big Red + Marbles bounce off the ground
+                </p>
+                <div class="duration-picker">
+                  <button
+                    class="physics-btn"
+                    data-config="GROUND_BOUNCE_SMALL"
+                    data-value="0.45"
+                  >
+                    Low
+                  </button>
+                  <button
+                    class="physics-btn physics-btn--selected"
+                    data-config="GROUND_BOUNCE_SMALL"
+                    data-value="0.78"
+                  >
+                    Normal
+                  </button>
+                  <button
+                    class="physics-btn"
+                    data-config="GROUND_BOUNCE_SMALL"
+                    data-value="0.95"
+                  >
+                    High
+                  </button>
+                </div>
               </div>
             </div>
 
             <div class="physics-panel" id="physics-spin">
-              <p class="start-overlay__label">
-                Self-propulsion strength of marbles
-              </p>
-              <div class="duration-picker">
-                <button
-                  class="physics-btn"
-                  data-config="SMALL_SPIN_DRIVE"
-                  data-value="45"
-                >
-                  Low
-                </button>
-                <button
-                  class="physics-btn physics-btn--selected"
-                  data-config="SMALL_SPIN_DRIVE"
-                  data-value="90"
-                >
-                  Normal
-                </button>
-                <button
-                  class="physics-btn"
-                  data-config="SMALL_SPIN_DRIVE"
-                  data-value="180"
-                >
-                  High
-                </button>
+              <div class="option-set">
+                <p class="start-overlay__label">Marble self-propulsion</p>
+                <div class="duration-picker">
+                  <button
+                    class="physics-btn"
+                    data-config="SMALL_SPIN_DRIVE"
+                    data-value="45"
+                  >
+                    Low
+                  </button>
+                  <button
+                    class="physics-btn physics-btn--selected"
+                    data-config="SMALL_SPIN_DRIVE"
+                    data-value="90"
+                  >
+                    Normal
+                  </button>
+                  <button
+                    class="physics-btn"
+                    data-config="SMALL_SPIN_DRIVE"
+                    data-value="180"
+                  >
+                    High
+                  </button>
+                </div>
+              </div>
+
+              <div class="option-set">
+                <p class="start-overlay__label">Big Red self-propulsion</p>
+                <div class="duration-picker">
+                  <button
+                    class="physics-btn"
+                    data-config="LARGE_SPIN_DRIVE"
+                    data-value="12"
+                  >
+                    Low
+                  </button>
+                  <button
+                    class="physics-btn physics-btn--selected"
+                    data-config="LARGE_SPIN_DRIVE"
+                    data-value="24"
+                  >
+                    Normal
+                  </button>
+                  <button
+                    class="physics-btn"
+                    data-config="LARGE_SPIN_DRIVE"
+                    data-value="48"
+                  >
+                    High
+                  </button>
+                </div>
               </div>
             </div>
 
             <div class="physics-panel" id="physics-mass">
-              <p class="start-overlay__label">
-                Big Red's mass relative to marbles
-              </p>
-              <div class="duration-picker">
-                <button
-                  class="physics-btn"
-                  data-config="LARGE_BALL_MASS_RATIO"
-                  data-value="8"
-                >
-                  Light
-                </button>
-                <button
-                  class="physics-btn physics-btn--selected"
-                  data-config="LARGE_BALL_MASS_RATIO"
-                  data-value="16"
-                >
-                  Normal
-                </button>
-                <button
-                  class="physics-btn"
-                  data-config="LARGE_BALL_MASS_RATIO"
-                  data-value="32"
-                >
-                  Heavy
-                </button>
+              <div class="option-set">
+                <p class="start-overlay__label">
+                  Big Red's mass relative to marbles
+                </p>
+                <div class="duration-picker">
+                  <button
+                    class="physics-btn"
+                    data-config="LARGE_BALL_MASS_RATIO"
+                    data-value="8"
+                  >
+                    Light
+                  </button>
+                  <button
+                    class="physics-btn physics-btn--selected"
+                    data-config="LARGE_BALL_MASS_RATIO"
+                    data-value="16"
+                  >
+                    Normal
+                  </button>
+                  <button
+                    class="physics-btn"
+                    data-config="LARGE_BALL_MASS_RATIO"
+                    data-value="32"
+                  >
+                    Heavy
+                  </button>
+                </div>
+              </div>
+
+              <div class="option-set">
+                <p class="start-overlay__label">Marble damage model</p>
+                <div class="duration-picker">
+                  <button
+                    class="physics-btn physics-btn--selected"
+                    data-config="DAMAGE_MODE"
+                    data-value="friction"
+                  >
+                    Friction
+                  </button>
+                  <button
+                    class="physics-btn"
+                    data-config="DAMAGE_MODE"
+                    data-value="impulse"
+                  >
+                    Impulse
+                  </button>
+                  <button
+                    class="physics-btn"
+                    data-config="DAMAGE_MODE"
+                    data-value="hybrid"
+                  >
+                    Hybrid
+                  </button>
+                </div>
               </div>
             </div>
           </div>
