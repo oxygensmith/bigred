@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.15";
+export const VERSION = "1.2.16";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -110,8 +110,8 @@ so balls will still differ from each other. */
   DAMAGE_IMPULSE_COOLDOWN: 0.35, // Seconds between impulse damage hits per marble
   LARGE_BALL_GROWTH_PER_KILL: 5, // Flat px added to radius per kill. Set 0 to disable.
   LARGE_BALL_GROWTH_SPEED: 10, // How fast radius lerps to its target size (higher = faster growth animation)
-  ABSORB_MODE: "size",      // "size" | "mass" | "both" | "neither"
-  MASS_GAIN_PER_KILL: 2,    // Mass ratio points added per kill in "mass" and "both" modes
+  ABSORB_MODE: "size", // "size" | "mass" | "both" | "neither"
+  MASS_GAIN_PER_KILL: 2, // Mass ratio points added per kill in "mass" and "both" modes
 
   // ─── Audio ────────────────────────────────────────────────────────────────
   USE_SAMPLED_AUDIO: 0, // 0 = synthesized fallback sounds only; 1 = load base64 samples from sounds.js
@@ -1353,7 +1353,8 @@ export class Game {
         const normalX = dx / (distance || 1);
         const normalY = dy / (distance || 1);
         const overlap = minDist - distance;
-        const massRatio = CONFIG.LARGE_BALL_MASS_RATIO + this.largeBall.massRatioBonus;
+        const massRatio =
+          CONFIG.LARGE_BALL_MASS_RATIO + this.largeBall.massRatioBonus;
         const smallShare = massRatio / (massRatio + 1);
         small.x += normalX * overlap * smallShare;
         small.y += normalY * overlap * smallShare;

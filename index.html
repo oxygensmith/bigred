@@ -202,12 +202,14 @@
             <button class="physics-tab" data-physics="bounce">Bounce</button>
             <button class="physics-tab" data-physics="spin">Spin Drive</button>
             <button class="physics-tab" data-physics="mass">Mass</button>
+            <button class="physics-tab" data-physics="collisions">Collisions</button>
           </div>
           <div class="physics-panels">
             <div
               class="physics-panel physics-panel--active"
               id="physics-gravity"
             >
+              <p class="physics-panel__title">Gravity Options</p>
               <div class="option-set">
                 <p class="start-overlay__label">
                   Gravitational pull on Big Red + Marbles
@@ -239,6 +241,7 @@
             </div>
 
             <div class="physics-panel" id="physics-bounce">
+              <p class="physics-panel__title">Bounce Options</p>
               <div class="option-set">
                 <p class="start-overlay__label">
                   How much Big Red + Marbles bounce off the ground
@@ -270,6 +273,7 @@
             </div>
 
             <div class="physics-panel" id="physics-spin">
+              <p class="physics-panel__title">Spin Drive Options</p>
               <div class="option-set">
                 <p class="start-overlay__label">Marble self-propulsion</p>
                 <div class="duration-picker">
@@ -326,6 +330,7 @@
             </div>
 
             <div class="physics-panel" id="physics-mass">
+              <p class="physics-panel__title">Mass Options</p>
               <div class="option-set">
                 <p class="start-overlay__label">
                   Big Red's mass relative to marbles
@@ -391,30 +396,16 @@
                 </div>
               </div>
 
+            </div>
+
+            <div class="physics-panel" id="physics-collisions">
+              <p class="physics-panel__title">Collision Physics</p>
               <div class="option-set">
                 <p class="start-overlay__label">Marble damage model</p>
                 <div class="duration-picker">
-                  <button
-                    class="physics-btn physics-btn--selected"
-                    data-config="DAMAGE_MODE"
-                    data-value="friction"
-                  >
-                    Friction
-                  </button>
-                  <button
-                    class="physics-btn"
-                    data-config="DAMAGE_MODE"
-                    data-value="impulse"
-                  >
-                    Impulse
-                  </button>
-                  <button
-                    class="physics-btn"
-                    data-config="DAMAGE_MODE"
-                    data-value="hybrid"
-                  >
-                    Hybrid
-                  </button>
+                  <button class="physics-btn physics-btn--selected" data-config="DAMAGE_MODE" data-value="friction">Friction</button>
+                  <button class="physics-btn" data-config="DAMAGE_MODE" data-value="impulse">Impulse</button>
+                  <button class="physics-btn" data-config="DAMAGE_MODE" data-value="hybrid">Hybrid</button>
                 </div>
               </div>
             </div>
