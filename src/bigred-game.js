@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.2";
+export const VERSION = "1.2.4";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -124,8 +124,8 @@ so balls will still differ from each other. */
   HEALTH_PICKUP_HEAL: 0.5, // Fraction of missing health restored on collection
   HEALTH_PICKUP_LOOKAHEAD: 2000, // How far ahead of current camera to place the pickup (px)
   HEALTH_PICKUP_MIN_CLEARANCE: 40, // Minimum px above the terrain surface
-  PICKUP_MODE: "interval",  // "interval" | "random" | "total"
-  PICKUP_VALUE: 5,          // seconds for interval/random modes; count for total mode
+  PICKUP_MODE: "interval", // "interval" | "random" | "total"
+  PICKUP_VALUE: 5, // seconds for interval/random modes; count for total mode
 
   // ─── Terrain generation ───────────────────────────────────────────────────
   TERRAIN_CHUNKS: 750, // Not used at runtime — chunk count is auto-calculated as 10 segments/sec of game duration
@@ -438,6 +438,8 @@ export class Game {
           healthAtFinish: 0,
           hitCooldown: 0,
           healGlow: 0,
+          shieldHits: 0,
+          shieldAngle: 0,
           stuck: false,
           wasOverlapping: false,
         };
@@ -447,6 +449,8 @@ export class Game {
     this.healthPickups = [];
     this._lastPickupSpawnMs = 0;
     this._nextPickupMs = this._scheduleNextPickup(0);
+    this.shieldPickups = [];
+    this._nextShieldMs = 10000; // first shield appears at 10 s
     this.backWallRightX = 0;
     this.backWallFlash = 0;
     this.shakeAmplitude = 0;
@@ -1023,9 +1027,11 @@ export class Game {
     this.smallBalls.forEach((b) => {
       if (b.hitCooldown > 0) b.hitCooldown -= dt;
       if (b.healGlow > 0) b.healGlow -= dt;
+      if (b.shieldHits > 0) b.shieldAngle += dt * 1.8;
     });
 
     this.updateHealthPickups(dt);
+    this.updateShieldPickups();
     this.resolveCollisions(dt);
     this.updateCamera(dt);
     this.updateScoreboard();
@@ -1343,9 +1349,10 @@ export class Game {
       if (shouldSpawn) {
         // total mode advances from the scheduled time to preserve even spacing;
         // interval/random advance from now so late spawns don't bunch up
-        this._nextPickupMs = mode === "total"
-          ? this._scheduleNextPickup(this._nextPickupMs)
-          : this._scheduleNextPickup(this.elapsedMs);
+        this._nextPickupMs =
+          mode === "total"
+            ? this._scheduleNextPickup(this._nextPickupMs)
+            : this._scheduleNextPickup(this.elapsedMs);
         this._lastPickupSpawnMs = this.elapsedMs;
         const r = CONFIG.HEALTH_PICKUP_RADIUS;
         const spawnX = clamp(
@@ -1357,7 +1364,9 @@ export class Game {
         const minY = r + 40;
         const maxY = groundY - CONFIG.HEALTH_PICKUP_MIN_CLEARANCE - r;
         const spawnY =
-          minY < maxY ? minY + Math.random() * (maxY - minY) : (minY + maxY) / 2;
+          minY < maxY
+            ? minY + Math.random() * (maxY - minY)
+            : (minY + maxY) / 2;
         this.healthPickups.push({ x: spawnX, y: spawnY, r, age: 0 });
       }
     }
@@ -1394,6 +1403,55 @@ export class Game {
             });
           }
           return false; // consume the pickup
+        }
+      }
+      return true;
+    });
+  }
+
+  updateShieldPickups() {
+    if (this.gameOver || this.finishActive) return;
+
+    if (this.elapsedMs >= this._nextShieldMs) {
+      this._nextShieldMs += 10000;
+      const r = CONFIG.HEALTH_PICKUP_RADIUS;
+      const spawnX = clamp(
+        this.cameraX + CONFIG.HEALTH_PICKUP_LOOKAHEAD,
+        r,
+        this.sceneWidth - r,
+      );
+      const groundY = this.terrain.getY(spawnX);
+      const minY = r + 40;
+      const maxY = groundY - CONFIG.HEALTH_PICKUP_MIN_CLEARANCE - r;
+      const spawnY =
+        minY < maxY ? minY + Math.random() * (maxY - minY) : (minY + maxY) / 2;
+      this.shieldPickups.push({ x: spawnX, y: spawnY, r, age: 0 });
+    }
+
+    this.shieldPickups = this.shieldPickups.filter((pickup) => {
+      pickup.age += 1 / 60;
+      for (const ball of this.smallBalls) {
+        if (!ball.alive || ball.finished) continue;
+        const dx = ball.x - pickup.x;
+        const dy = ball.y - pickup.y;
+        if (Math.hypot(dx, dy) < ball.radius + pickup.r) {
+          ball.shieldHits = 3;
+          ball.shieldAngle = 0;
+          this.audio.playShieldPickup();
+          for (let i = 0; i < 10; i++) {
+            const angle = (i / 10) * Math.PI * 2;
+            const speed = 50 + Math.random() * 80;
+            this.particles.push({
+              x: pickup.x,
+              y: pickup.y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed - 40,
+              radius: 2 + Math.random() * 2,
+              alpha: 1,
+              color: "#aabbcc",
+            });
+          }
+          return false;
         }
       }
       return true;
@@ -1463,6 +1521,16 @@ export class Game {
         }
 
         small.healGlow = 0;
+
+        // ── Shield check — absorb hit, no damage ─────────────────────────────
+        if (small.shieldHits > 0) {
+          if (small.hitCooldown <= 0) {
+            small.shieldHits = Math.max(0, small.shieldHits - 1);
+            small.hitCooldown = 0.3;
+            this.audio.playShieldHit();
+          }
+          return;
+        }
 
         // ── Damage ────────────────────────────────────────────────────────────
         const dmgMul = CONFIG.DAMAGE_MULTIPLIER;
@@ -1629,6 +1697,7 @@ export class Game {
     this.drawBackWall(ctx);
     this.drawFinishLine(ctx);
     this.drawHealthPickups(ctx);
+    this.drawShieldPickups(ctx);
     this.drawBalls(ctx);
     this.drawParticles(ctx);
     ctx.restore();
@@ -1676,6 +1745,48 @@ export class Game {
       // Vertical bar
       ctx.rect(-thick, -arm, thick * 2, arm * 2);
       ctx.fill();
+
+      ctx.restore();
+    });
+  }
+
+  drawShieldPickups(ctx) {
+    if (!this.shieldPickups.length) return;
+    const r = CONFIG.HEALTH_PICKUP_RADIUS;
+
+    this.shieldPickups.forEach((pickup) => {
+      const pulse = 0.96 + 0.04 * Math.sin(pickup.age * 3.5);
+      const pr = r * pulse;
+
+      ctx.save();
+      ctx.translate(pickup.x, pickup.y);
+
+      if (!this.isMobile) {
+        ctx.shadowColor = "rgba(180, 190, 210, 0.5)";
+        ctx.shadowBlur = 18;
+      }
+
+      // Red circle border
+      ctx.beginPath();
+      ctx.arc(0, 0, pr, 0, Math.PI * 2);
+      ctx.strokeStyle = "#e8493f";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+
+      // Inverted grey triangle (pointing down)
+      const h = pr * 0.82;
+      ctx.beginPath();
+      ctx.moveTo(-h * 0.72, -h * 0.42);
+      ctx.lineTo(h * 0.72, -h * 0.42);
+      ctx.lineTo(0, h * 0.62);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(165, 178, 195, 0.88)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(210, 220, 235, 0.55)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
 
       ctx.restore();
     });
@@ -1889,6 +2000,31 @@ export class Game {
           if (!this.isMobile) {
             ctx.shadowColor = ball.color;
             ctx.shadowBlur = 10;
+          }
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+        }
+
+        // Shield ring — revolving 12-sided polygon in marble's own colour
+        if (ball.alive && ball.shieldHits > 0) {
+          const sides = 12;
+          const ringR = ball.radius + 7;
+          ctx.beginPath();
+          for (let i = 0; i <= sides; i++) {
+            const a = ball.shieldAngle + (i / sides) * Math.PI * 2;
+            const px = ball.x + Math.cos(a) * ringR;
+            const py = ball.y + Math.sin(a) * ringR;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.strokeStyle = ball.color;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.85;
+          if (!this.isMobile) {
+            ctx.shadowColor = ball.color;
+            ctx.shadowBlur = 8;
           }
           ctx.stroke();
           ctx.globalAlpha = 1;

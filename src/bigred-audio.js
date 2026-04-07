@@ -306,6 +306,49 @@ export class AudioEngine {
     }, 900);
   }
 
+  /* Shield pickup collected — metallic shimmer */
+  playShieldPickup() {
+    if (!this.ac) return;
+    this._tryPlay((ac) => {
+      const t = ac.currentTime;
+      const dur = 0.45;
+      [880, 1320].forEach((freq, i) => {
+        const osc = ac.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq * 1.06, t + i * 0.05);
+        osc.frequency.exponentialRampToValueAtTime(freq, t + i * 0.05 + 0.1);
+        const gain = ac.createGain();
+        gain.gain.setValueAtTime(0, t + i * 0.05);
+        gain.gain.linearRampToValueAtTime(0.15, t + i * 0.05 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        osc.connect(gain);
+        gain.connect(ac.destination);
+        osc.start(t + i * 0.05);
+        osc.stop(t + dur + 0.05);
+      });
+    }, 500);
+  }
+
+  /* Shield absorbs a hit — short metallic clank */
+  playShieldHit() {
+    if (!this.ac) return;
+    this._tryPlay((ac) => {
+      const t = ac.currentTime;
+      const dur = 0.22;
+      const osc = ac.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(1400, t);
+      osc.frequency.exponentialRampToValueAtTime(700, t + dur);
+      const gain = ac.createGain();
+      gain.gain.setValueAtTime(0.24, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start(t);
+      osc.stop(t + dur);
+    }, 280);
+  }
+
   /* End-screen stings */
   playEscaped() {
     if (!this.ac) return;
