@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.8";
+export const VERSION = "1.2.9";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -126,7 +126,7 @@ so balls will still differ from each other. */
   TERRAIN_MIN_Y: 260, // Highest point terrain can reach (px from top)
   TERRAIN_MAX_Y_OFFSET: 80, // Minimum distance from the bottom of the canvas (px)
   TERRAIN_STREAK_LENGTH: 12, // Max consecutive segments that can share the same up/down direction
-  TERRAIN_STREAK_CHANCE: 0.99, // Probability (0–1) that the next segment continues in the same direction
+  TERRAIN_STREAK_CHANCE: 0.95, // Probability (0–1) that the next segment continues in the same direction
 
   // ─── Camera ───────────────────────────────────────────────────────────────
   CAMERA_OFFSET_X: 180, // How far from the left edge Big Red is kept (px)
@@ -191,38 +191,35 @@ const BIG_RED_SVG = `<svg id="big-red" data-name="big-red" xmlns="http://www.w3.
   <path fill="#e8493f" d="M469.63,256l42.37-13.42-43.54-8.91,40.74-17.77-44.24-4.31,38.66-21.93-44.45.33,36.15-25.85-44.17,4.98,33.25-29.49-43.41,9.57,29.99-32.81-42.17,14.05,26.4-35.76-40.47,18.38,22.51-38.32-38.32,22.51,18.38-40.47-35.76,26.4,14.05-42.17-32.81,29.99,9.57-43.41-29.49,33.25,4.98-44.17-25.85,36.15.33-44.45-21.93,38.66-4.31-44.24-17.77,40.74L269.42,0l-13.42,42.37L242.58,0l-8.91,43.54L215.9,2.8l-4.31,44.24-21.93-38.66.33,44.45-25.85-36.15,4.98,44.17-29.49-33.25,9.57,43.41-32.81-29.99,14.05,42.17-35.76-26.4,18.38,40.47-38.32-22.51,22.51,38.32-40.47-18.38,26.4,35.76-42.17-14.05,29.99,32.81-43.41-9.57,33.25,29.49-44.17-4.98,36.15,25.85-44.45-.33,38.66,21.93-44.24,4.31,40.74,17.77L0,242.58l42.37,13.42L0,269.42l43.54,8.91-40.74,17.77,44.24,4.31-38.66,21.93,44.45-.33-36.15,25.85,44.17-4.98-33.25,29.49,43.41-9.57-29.99,32.81,42.17-14.05-26.4,35.76,40.47-18.38-22.51,38.32,38.32-22.51-18.38,40.47,35.76-26.4-14.05,42.17,32.81-29.99-9.57,43.41,29.49-33.25-4.98,44.17,25.85-36.15-.33,44.45,21.93-38.66,4.31,44.24,17.77-40.74,8.91,43.54,13.42-42.37,13.42,42.37,8.91-43.54,17.77,40.74,4.31-44.24,21.93,38.66-.33-44.45,25.85,36.15-4.98-44.17,29.49,33.25-9.57-43.41,32.81,29.99-14.05-42.17,35.76,26.4-18.38-40.47,38.32,22.51-22.51-38.32,40.47,18.38-26.4-35.76,42.17,14.05-29.99-32.81,43.41,9.57-33.25-29.49,44.17,4.98-36.15-25.85,44.45.33-38.66-21.93,44.24-4.31-40.74-17.77,43.54-8.91-42.37-13.42ZM429.25,269.77h-166.23v166.23h-19.21v-166.23H77.59v-19.21h166.23V84.34h19.21v166.23h166.23v19.21Z"/>
 </svg>`;
 
-const createTerrain = (width, height, chunks) => {
+const createTerrain = (width, height, chunks, rng) => {
   const points = [];
   const chunkWidth = width / chunks;
   let y = height - 100;
   const minY = CONFIG.TERRAIN_MIN_Y;
   const maxY = height - CONFIG.TERRAIN_MAX_Y_OFFSET;
 
-  // Directional streak state: dir = 1 (going down in canvas = valley) or -1 (going up = hill)
-  let streakDir = Math.random() < 0.5 ? 1 : -1;
+  let streakDir = rng() < 0.5 ? 1 : -1;
   let streakCount = 0;
 
   for (let i = 0; i <= chunks; i += 1) {
-    // Decide direction for this segment
     if (
       streakCount > 0 &&
       streakCount <= CONFIG.TERRAIN_STREAK_LENGTH &&
-      Math.random() < CONFIG.TERRAIN_STREAK_CHANCE
+      rng() < CONFIG.TERRAIN_STREAK_CHANCE
     ) {
       streakCount++;
     } else {
-      streakDir = Math.random() < 0.5 ? 1 : -1;
+      streakDir = rng() < 0.5 ? 1 : -1;
       streakCount = 1;
     }
 
-    // Force reversal when pressed against a boundary
     if (y <= minY + 20) streakDir = 1;
     if (y >= maxY - 20) streakDir = -1;
 
     const target =
       CONFIG.TERRAIN_BASE_Y +
       Math.sin((i / chunks) * Math.PI * 2) * CONFIG.TERRAIN_PEAK_AMPLITUDE;
-    const jitter = Math.random() * CONFIG.TERRAIN_RANDOM_DELTA;
+    const jitter = rng() * CONFIG.TERRAIN_RANDOM_DELTA;
     y += (target - y) * CONFIG.TERRAIN_SMOOTHING + streakDir * jitter;
     y = clamp(y, minY, maxY);
     points.push({ x: i * chunkWidth, y });
@@ -340,6 +337,7 @@ export class Game {
       this.sceneWidth,
       CONFIG.SCENE_HEIGHT,
       this.terrainChunks,
+      rng,
     );
     this.largeBall = {
       type: "large",
