@@ -282,6 +282,9 @@ export class Game {
     this.leaderboardVisible = false;
     this.loopRunning = false;
     this._rafId = null;
+    this._demoRafId = null;
+    this._demoRunning = false;
+    this.demoSpeed = 120;
 
     window.addEventListener("keydown", (event) => {
       if (event.code === "Space") {
@@ -525,6 +528,91 @@ export class Game {
     this.allBallsPaused = false;
     this.ui.endOverlay.classList.add("end-overlay--hidden");
     this.ui.startOverlay.classList.remove("start-overlay--hidden");
+    this.startDemo();
+  }
+
+  startDemo(smoothness = 80) {
+    // Generate a looping demo terrain — 4× the viewport wide so we can wrap
+    const demoWidth = this.viewW * 4;
+    const demoChunks = Math.round(demoWidth / smoothness);
+    const rng = mulberry32(Math.floor(Math.random() * 0xffffffff));
+    this.demoTerrain = createTerrain(demoWidth, CONFIG.SCENE_HEIGHT, demoChunks, rng);
+    this.demoWidth = demoWidth;
+    this.demoCameraX = 0;
+    this._demoRunning = true;
+    if (this._demoRafId) cancelAnimationFrame(this._demoRafId);
+    this._demoLastTs = null;
+    const loop = (ts) => {
+      if (!this._demoRunning) return;
+      const dt = this._demoLastTs ? Math.min((ts - this._demoLastTs) / 1000, 0.05) : 0;
+      this._demoLastTs = ts;
+      this.demoCameraX = (this.demoCameraX + dt * this.demoSpeed) % (this.demoWidth - this.viewW);
+      this.drawDemo();
+      this._demoRafId = requestAnimationFrame(loop);
+    };
+    this._demoRafId = requestAnimationFrame(loop);
+  }
+
+  stopDemo() {
+    this._demoRunning = false;
+    if (this._demoRafId !== null) {
+      cancelAnimationFrame(this._demoRafId);
+      this._demoRafId = null;
+    }
+  }
+
+  drawDemo() {
+    const ctx = this.ctx;
+    const w = this.viewW;
+    const h = this.viewH;
+    ctx.clearRect(0, 0, w, h);
+
+    // Sky gradient
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, "#07091a");
+    sky.addColorStop(1, "#0f1124");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.translate(-this.demoCameraX, 0);
+
+    const allPoints = this.demoTerrain.points;
+    const left = this.demoCameraX - 60;
+    const right = this.demoCameraX + w + 60;
+    let startIdx = 0;
+    for (let i = 1; i < allPoints.length; i++) {
+      if (allPoints[i].x >= left) { startIdx = Math.max(0, i - 1); break; }
+    }
+    let endIdx = allPoints.length - 1;
+    for (let i = startIdx; i < allPoints.length; i++) {
+      if (allPoints[i].x > right) { endIdx = Math.min(allPoints.length - 1, i + 1); break; }
+    }
+    const points = allPoints.slice(startIdx, endIdx + 1);
+
+    if (points.length >= 2) {
+      const grad = ctx.createLinearGradient(0, 0, 0, CONFIG.SCENE_HEIGHT);
+      grad.addColorStop(0, "#2f2e40");
+      grad.addColorStop(1, "#0f1124");
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+      ctx.lineTo(points[points.length - 1].x, CONFIG.SCENE_HEIGHT);
+      ctx.lineTo(points[0].x, CONFIG.SCENE_HEIGHT);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      ctx.strokeStyle = "#6f7ac1";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 
   /* Hard stop — cancels the rAF loop and resets audio. Use for the top-bar
@@ -541,6 +629,7 @@ export class Game {
   }
 
   begin(durationMs, tiebreaker, landscapeSmoothness) {
+    this.stopDemo();
     this.audio.reset();
     this.audio.init(CONFIG.USE_SAMPLED_AUDIO);
     this.gameDurationMs = durationMs;

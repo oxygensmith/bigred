@@ -38,6 +38,7 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 
   const game = new Game(canvas, ui);
+  game.startDemo();
 
   let selectedDuration = 300000;
   let selectedTiebreaker = "health";
@@ -54,21 +55,33 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  const durationSpeeds = {
+    120000: 300,   // 2 min  → 250% of 120
+    180000: 180,   // 3 min  → 150% of 120
+    300000: 120,   // 5 min  → base speed
+    600000: 60,    // 10 min → 50% of 120
+    1200000: 30,   // 20 min → 25% of 120
+  };
+
   const durationBtns = document.querySelectorAll(".duration-btn");
   durationBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (btn.classList.contains("duration-btn--selected")) return;
       durationBtns.forEach((b) => b.classList.remove("duration-btn--selected"));
       btn.classList.add("duration-btn--selected");
       selectedDuration = parseInt(btn.dataset.ms, 10);
+      game.demoSpeed = durationSpeeds[selectedDuration] ?? 120;
     });
   });
 
   const landscapeBtns = document.querySelectorAll(".landscape-btn");
   landscapeBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (btn.classList.contains("landscape-btn--selected")) return;
       landscapeBtns.forEach((b) => b.classList.remove("landscape-btn--selected"));
       btn.classList.add("landscape-btn--selected");
       selectedSmoothness = parseInt(btn.dataset.smoothness, 10);
+      game.startDemo(selectedSmoothness);
     });
   });
 
