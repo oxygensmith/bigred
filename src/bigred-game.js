@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.14";
+export const VERSION = "1.2.15";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -536,6 +536,7 @@ export class Game {
     this.allBallsPaused = false;
     this.ui.endOverlay.classList.add("end-overlay--hidden");
     this.ui.startOverlay.classList.remove("start-overlay--hidden");
+    this.ui.scoreboard.classList.add("scoreboard--hidden");
     this.startDemo();
   }
 
@@ -662,6 +663,7 @@ export class Game {
     this.landscapeSmoothness = landscapeSmoothness;
     CONFIG.LANDSCAPE_SMOOTHNESS = landscapeSmoothness;
     this.ui.startOverlay.classList.add("start-overlay--hidden");
+    this.ui.scoreboard.classList.remove("scoreboard--hidden");
     this.reset();
     if (!this.loopRunning) {
       this.loopRunning = true;

@@ -127,6 +127,10 @@
   border: 1px solid var(--border);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+
+  &.scoreboard--hidden {
+    visibility: hidden;
+  }
 }
 
 // ── Stats popup (S key) ───────────────────────────────────────────────────────

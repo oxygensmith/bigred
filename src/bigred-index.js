@@ -30,6 +30,7 @@ window.addEventListener("DOMContentLoaded", () => {
     endOverlay: document.getElementById("end-overlay"),
     endHeadline: document.getElementById("end-headline"),
     endSubline: document.getElementById("end-subline"),
+    scoreboard: document.querySelector(".scoreboard"),
     startOverlay: document.getElementById("start-overlay"),
     pauseOverlay: document.getElementById("pause-overlay"),
     leaderboardOverlay: document.getElementById("leaderboard-overlay"),
