@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.16";
+export const VERSION = "1.2.17";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────

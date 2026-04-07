@@ -243,31 +243,19 @@
             <div class="physics-panel" id="physics-bounce">
               <p class="physics-panel__title">Bounce Options</p>
               <div class="option-set">
-                <p class="start-overlay__label">
-                  How much Big Red + Marbles bounce off the ground
-                </p>
+                <p class="start-overlay__label">Marble bounce</p>
                 <div class="duration-picker">
-                  <button
-                    class="physics-btn"
-                    data-config="GROUND_BOUNCE_SMALL"
-                    data-value="0.45"
-                  >
-                    Low
-                  </button>
-                  <button
-                    class="physics-btn physics-btn--selected"
-                    data-config="GROUND_BOUNCE_SMALL"
-                    data-value="0.78"
-                  >
-                    Normal
-                  </button>
-                  <button
-                    class="physics-btn"
-                    data-config="GROUND_BOUNCE_SMALL"
-                    data-value="0.95"
-                  >
-                    High
-                  </button>
+                  <button class="physics-btn" data-config="GROUND_BOUNCE_SMALL" data-value="0.45">Low</button>
+                  <button class="physics-btn physics-btn--selected" data-config="GROUND_BOUNCE_SMALL" data-value="0.78">Normal</button>
+                  <button class="physics-btn" data-config="GROUND_BOUNCE_SMALL" data-value="0.95">High</button>
+                </div>
+              </div>
+              <div class="option-set">
+                <p class="start-overlay__label">Big Red bounce</p>
+                <div class="duration-picker">
+                  <button class="physics-btn" data-config="GROUND_BOUNCE_LARGE" data-value="0.2">Low</button>
+                  <button class="physics-btn physics-btn--selected" data-config="GROUND_BOUNCE_LARGE" data-value="0.48">Normal</button>
+                  <button class="physics-btn" data-config="GROUND_BOUNCE_LARGE" data-value="0.75">High</button>
                 </div>
               </div>
             </div>
