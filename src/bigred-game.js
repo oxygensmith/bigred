@@ -1,6 +1,6 @@
 import { AudioEngine } from "./bigred-audio.js";
 
-export const VERSION = "1.2.9";
+export const VERSION = "1.2.10";
 
 const CONFIG = {
   // ─── World ────────────────────────────────────────────────────────────────
@@ -60,10 +60,11 @@ so balls will still differ from each other. */
   // ─── Spawn ────────────────────────────────────────────────────────────────
   SPAWN_X_START: 500, // World x of the leftmost spawn slot
   SPAWN_X_SPACING: 22, // px between each spawn slot
-  SPAWN_Y_BASE: 80, // Canvas y of the spawn drop point
-  SPAWN_Y_JITTER: 140, // Max random y offset per ball
+  SPAWN_Y_BASE: 40, // Canvas y of the highest possible spawn point
+  SPAWN_Y_JITTER: 420, // Max random y offset per ball (larger = more staggered drop order)
   SPAWN_VX_BASE: 40, // Initial rightward speed (px/s)
   SPAWN_VX_JITTER: 60, // Max random addition to starting vx
+  SPAWN_VY_JITTER: 180, // Max random downward velocity at spawn (px/s) — staggers landing time
 
   // ─── Ground physics ───────────────────────────────────────────────────────
   GROUND_BOUNCE_LARGE: 0.48, // Normal-velocity restitution for Big Red on ground impact
@@ -396,7 +397,7 @@ export class Game {
           x: spawnSlots[index],
           y: CONFIG.SPAWN_Y_BASE + rng() * CONFIG.SPAWN_Y_JITTER,
           vx: CONFIG.SPAWN_VX_BASE + rng() * CONFIG.SPAWN_VX_JITTER,
-          vy: 0,
+          vy: rng() * CONFIG.SPAWN_VY_JITTER,
           omega: 6 + rng() * 4,
           angle: rng() * Math.PI * 2,
           radius,
