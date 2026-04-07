@@ -108,8 +108,10 @@ so balls will still differ from each other. */
   DAMAGE_PER_SECOND: 24, // HP/s drained during contact (friction + hybrid)
   DAMAGE_IMPULSE_SCALE: 0.08, // HP per px/s of relVel per impulse hit (impulse + hybrid)
   DAMAGE_IMPULSE_COOLDOWN: 0.35, // Seconds between impulse damage hits per marble
-  LARGE_BALL_GROWTH_PER_KILL: 3, // Flat px added to radius per kill. Set 0 to disable.
-  LARGE_BALL_GROWTH_SPEED: 3, // How fast radius lerps to its target size (higher = faster growth animation)
+  LARGE_BALL_GROWTH_PER_KILL: 5, // Flat px added to radius per kill. Set 0 to disable.
+  LARGE_BALL_GROWTH_SPEED: 10, // How fast radius lerps to its target size (higher = faster growth animation)
+  ABSORB_MODE: "size",      // "size" | "mass" | "both" | "neither"
+  MASS_GAIN_PER_KILL: 2,    // Mass ratio points added per kill in "mass" and "both" modes
 
   // ─── Audio ────────────────────────────────────────────────────────────────
   USE_SAMPLED_AUDIO: 0, // 0 = synthesized fallback sounds only; 1 = load base64 samples from sounds.js
@@ -356,6 +358,7 @@ export class Game {
       angle: 0,
       radius: CONFIG.LARGE_BALL_RADIUS,
       targetRadius: CONFIG.LARGE_BALL_RADIUS,
+      massRatioBonus: 0,
       color: "#e8493f",
     };
     this.killCount = 0;
@@ -1350,7 +1353,7 @@ export class Game {
         const normalX = dx / (distance || 1);
         const normalY = dy / (distance || 1);
         const overlap = minDist - distance;
-        const massRatio = CONFIG.LARGE_BALL_MASS_RATIO;
+        const massRatio = CONFIG.LARGE_BALL_MASS_RATIO + this.largeBall.massRatioBonus;
         const smallShare = massRatio / (massRatio + 1);
         small.x += normalX * overlap * smallShare;
         small.y += normalY * overlap * smallShare;
@@ -1426,7 +1429,12 @@ export class Game {
           small.vx = 0;
           small.vy = 0;
           this.killCount++;
-          this.largeBall.targetRadius += CONFIG.LARGE_BALL_GROWTH_PER_KILL;
+          if (CONFIG.ABSORB_MODE === "size" || CONFIG.ABSORB_MODE === "both") {
+            this.largeBall.targetRadius += CONFIG.LARGE_BALL_GROWTH_PER_KILL;
+          }
+          if (CONFIG.ABSORB_MODE === "mass" || CONFIG.ABSORB_MODE === "both") {
+            this.largeBall.massRatioBonus += CONFIG.MASS_GAIN_PER_KILL;
+          }
           for (let i = 0; i < 16; i++) {
             const angle = (i / 16) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
             const speed = 60 + Math.random() * 140;
