@@ -4,6 +4,7 @@ node_modules/
 # Parcel build output
 dist/
 .parcel-cache/
+.claude/
 
 # OS
 .DS_Store
